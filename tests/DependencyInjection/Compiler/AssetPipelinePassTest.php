@@ -43,7 +43,7 @@ final class AssetPipelinePassTest extends TestCase
     public function testDetectsAssetMapper(): void
     {
         $container = $this->createContainer('auto');
-        $container->register(ImportMapGenerator::class, ImportMapGenerator::class);
+        $container->register('asset_mapper.importmap.generator', ImportMapGenerator::class);
 
         (new AssetPipelinePass())->process($container);
 

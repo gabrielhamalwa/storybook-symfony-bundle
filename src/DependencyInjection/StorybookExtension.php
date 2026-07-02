@@ -71,6 +71,9 @@ final class StorybookExtension extends Extension
 
         if ('asset_mapper' === $pipeline && class_exists(ImportMapGenerator::class)) {
             $this->registerExtractor($container, AssetMapperPipeline::class, $config['entrypoint']);
+            if (!$container->has(ImportMapGenerator::class)) {
+                $container->setAlias(ImportMapGenerator::class, 'asset_mapper.importmap.generator');
+            }
 
             return;
         }

@@ -42,6 +42,10 @@ final readonly class AssetPipelinePass implements CompilerPassInterface
 
         $container->setDefinition(AssetExtractorInterface::class, $definition);
         $container->setAlias(AssetPipelineInterface::class, AssetExtractorInterface::class);
+
+        if ('asset_mapper' === $pipeline && !$container->has(ImportMapGenerator::class)) {
+            $container->setAlias(ImportMapGenerator::class, 'asset_mapper.importmap.generator');
+        }
     }
 
     private function detectPipeline(ContainerBuilder $container): string
@@ -54,7 +58,7 @@ final readonly class AssetPipelinePass implements CompilerPassInterface
             return 'encore';
         }
 
-        if ($container->has(ImportMapGenerator::class)) {
+        if ($container->has('asset_mapper.importmap.generator')) {
             return 'asset_mapper';
         }
 
