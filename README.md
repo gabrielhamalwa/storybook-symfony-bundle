@@ -1,5 +1,250 @@
 # Storybook Symfony Bundle
 
-Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig framework.
+Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig framework. It renders Twig components in isolation, exposes component metadata, and extracts normalized assets for the Storybook renderer.
 
 Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=readme).
+
+## What it does
+
+This bundle is the PHP side of the Storybook Symfony/Twig integration. When you run Storybook with `@storybook/symfony-vite`, the frontend asks this bundle to:
+
+- Render a Twig component with a given set of props (`POST /_storybook/render/{id}`).
+- Return the styles and scripts that belong to the component's asset entrypoint.
+- Report health so the Storybook dev server knows the PHP backend is ready (`GET /_storybook/health`).
+- List discoverable components and expose source code for the docs panel (`GET /_storybook/index`, `GET /_storybook/source/{id}`).
+
+The bundle is intentionally small and relies on Symfony UX TwigComponent to render components.
+
+## Requirements
+
+- PHP 8.2 or higher
+- Symfony 6.4 or 7.0
+- Twig 3.8 or higher
+- Symfony UX TwigComponent 2.0 or 3.0
+
+## Installation
+
+Install the bundle with Composer:
+
+```bash
+composer require --dev storybook/symfony-bundle
+```
+
+Enable the bundle in `config/bundles.php` if it is not registered automatically by Symfony Flex:
+
+```php
+return [
+    // ...
+    Storybook\SymfonyBundle\StorybookBundle::class => ['storybook' => true],
+];
+```
+
+## Symfony configuration
+
+### Routes
+
+Add the bundle's controller to a routing file in the `storybook` environment, for example `config/routes/storybook.yaml`:
+
+```yaml
+storybook:
+  resource: Storybook\SymfonyBundle\Controller\StorybookController
+  type: attribute
+```
+
+The routes are attributed in `StorybookController`, so `type: attribute` is required.
+
+### Isolated environment
+
+Storybook boots Symfony in a dedicated `storybook` environment. Keep that environment minimal so the container compiles quickly. A typical `config/packages/storybook/framework.yaml` looks like this:
+
+```yaml
+framework:
+  router:
+    utf8: true
+    strict_requirements: ~
+  test: false
+  session:
+    enabled: false
+```
+
+You also need Twig and TwigComponent enabled in that environment:
+
+```yaml
+# config/packages/storybook/twig.yaml
+twig:
+  default_path: '%kernel.project_dir%/templates'
+  form_themes: ['tailwind_layout.html.twig']
+
+# config/packages/storybook/twig_component.yaml
+twig_component:
+  anonymous_template_directory: 'components/'
+  defaults:
+    App\Twig\Components\: '%kernel.project_dir%/src/Twig/Components'
+```
+
+## Bundle configuration
+
+The bundle is configured under the `storybook` key in `config/packages/storybook/storybook.yaml`:
+
+```yaml
+storybook:
+  environment: storybook
+  project_dir: '%kernel.project_dir%'
+  public_dir: '%kernel.project_dir%/public'
+  asset_pipeline: auto
+  entrypoint: app
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `environment` | `string` | `storybook` | Symfony environment used when the Storybook framework boots the PHP server. |
+| `project_dir` | `string` | `%kernel.project_dir%` | Path to the Symfony project root. |
+| `public_dir` | `string` | `%kernel.project_dir%/public` | Path to the public directory. |
+| `asset_pipeline` | `auto`, `pentatrion_vite`, `encore`, `asset_mapper`, `none` | `auto` | Asset pipeline to use for extracting styles and scripts. |
+| `entrypoint` | `string` | `app` | Entrypoint name used to look up the component's assets. |
+
+When `asset_pipeline` is `auto`, the bundle detects the installed pipeline by checking for known Symfony services in this order:
+
+1. Pentatrion Vite (`Pentatrion\ViteBundle\Service\EntrypointsLookupCollection`)
+2. Webpack Encore (`webpack_encore.entrypoint_lookup_collection`)
+3. AssetMapper (`asset_mapper.importmap.generator`)
+4. None (`NullAssetPipeline`)
+
+### Pentatrion Vite
+
+No extra configuration is required if the bundle is installed and `pentatrion/vite-bundle` is present. The bundle reads the `entrypoint` from Vite's `entrypoints.json` and returns the matching CSS and module scripts.
+
+### Webpack Encore
+
+When `symfony/webpack-encore-bundle` is installed, the bundle reads from the Encore entrypoint lookup. Configure your `webpack.config.cjs` (or `webpack.config.js`) to build an `app` entrypoint that includes your Stimulus bootstrap and component styles.
+
+```yaml
+storybook:
+  asset_pipeline: auto
+  entrypoint: app
+```
+
+### AssetMapper
+
+When `symfony/asset-mapper` is installed, the bundle reads the import map and eager entrypoint imports. Make sure the `app` asset is registered in `importmap.php` and any CSS files are mapped as eager imports.
+
+```yaml
+# config/packages/asset_mapper.yaml
+framework:
+  asset_mapper:
+    paths:
+      assets/
+    importmap_path: '%kernel.project_dir%/importmap.php'
+```
+
+```yaml
+storybook:
+  asset_pipeline: auto
+  entrypoint: app
+```
+
+### No asset pipeline
+
+If your components do not require CSS or JavaScript, set `asset_pipeline: none`:
+
+```yaml
+storybook:
+  asset_pipeline: none
+```
+
+## Endpoints
+
+All endpoints are mounted under the `/_storybook` prefix.
+
+### `GET /_storybook/health`
+
+Returns a simple status object used by the Storybook framework to wait for the PHP backend:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### `POST /_storybook/render/{id}`
+
+Renders the Twig component identified by `componentId` in the request body and returns the resulting HTML plus assets.
+
+Request body:
+
+```json
+{
+  "componentId": "Button",
+  "args": {
+    "label": "Save",
+    "variant": "primary"
+  }
+}
+```
+
+Response body:
+
+```json
+{
+  "html": "<button data-controller=\"button\" class=\"btn btn-primary\">Save</button>",
+  "assets": {
+    "pipeline": "pentatrion-vite",
+    "styles": [
+      { "url": "/build/assets/app.css" }
+    ],
+    "scripts": [
+      { "url": "/build/assets/app.js", "type": "module" }
+    ],
+    "importmap": {
+      "imports": {
+        "@hotwired/stimulus": "/build/assets/stimulus.js"
+      }
+    }
+  },
+  "metadata": {
+    "component": "Button"
+  }
+}
+```
+
+The `id` path parameter is the Storybook story ID; the actual Twig component name is passed as `componentId` in the JSON body.
+
+### `GET /_storybook/index`
+
+Reserved for the experimental auto-discovery indexer. Currently returns an empty list:
+
+```json
+{
+  "components": []
+}
+```
+
+### `GET /_storybook/source/{id}`
+
+Reserved for the docs panel source extractor. Currently returns an empty response:
+
+```json
+{
+  "template": null,
+  "class": null
+}
+```
+
+## Testing
+
+The bundle uses PHPUnit. Run the test suite from the bundle root:
+
+```bash
+./vendor/bin/phpunit
+```
+
+Tests cover the asset pipelines, the compiler pass, the controller, and the CORS listener.
+
+## Integration with Storybook
+
+This bundle is used together with the JavaScript packages from the Storybook monorepo:
+
+- `@storybook/symfony` — browser-side renderer that calls the endpoints above.
+- `@storybook/symfony-vite` — framework that starts the PHP server, wires the renderer, and manages the Vite builder.
+
+See the `@storybook/symfony-vite` README for the full quick start guide.
