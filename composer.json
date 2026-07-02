@@ -1,0 +1,41 @@
+{
+  "name": "storybook/symfony-bundle",
+  "description": "Symfony bundle for Storybook's Symfony/Twig framework",
+  "type": "symfony-bundle",
+  "license": "MIT",
+  "keywords": [
+    "storybook",
+    "symfony",
+    "twig",
+    "component",
+    "components"
+  ],
+  "homepage": "https://github.com/storybookjs/storybook-symfony-bundle",
+  "require": {
+    "php": ">=8.2",
+    "symfony/config": "^6.4 || ^7.0",
+    "symfony/dependency-injection": "^6.4 || ^7.0",
+    "symfony/http-foundation": "^6.4 || ^7.0",
+    "symfony/http-kernel": "^6.4 || ^7.0",
+    "symfony/routing": "^6.4 || ^7.0",
+    "symfony/ux-twig-component": "^2.0 || ^3.0",
+    "twig/twig": "^3.8"
+  },
+  "require-dev": {
+    "pentatrion/vite-bundle": "^8.0",
+    "phpunit/phpunit": "^10.0 || ^11.0",
+    "symfony/framework-bundle": "^6.4 || ^7.0",
+    "symfony/twig-bundle": "^6.4 || ^7.0",
+    "symfony/yaml": "^6.4 || ^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Storybook\\SymfonyBundle\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Storybook\\SymfonyBundle\\Tests\\": "tests/"
+    }
+  }
+}
