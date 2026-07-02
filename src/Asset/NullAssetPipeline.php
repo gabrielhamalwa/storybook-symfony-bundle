@@ -8,6 +8,11 @@ use Storybook\SymfonyBundle\Dto\AssetCollection;
 
 final class NullAssetPipeline implements AssetPipelineInterface, AssetExtractorInterface
 {
+    public function __construct(
+        private string $entrypoint = 'app',
+    ) {
+    }
+
     public function getAssets(): array
     {
         return [

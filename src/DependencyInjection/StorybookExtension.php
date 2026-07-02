@@ -51,10 +51,11 @@ final class StorybookExtension extends Extension
 
     private function registerAssetPipeline(ContainerBuilder $container, array $config): void
     {
-        $pipeline = $config['asset_pipeline'];
-        if ('auto' === $pipeline) {
-            $pipeline = $this->detectPipeline($container);
+        if ('auto' === $config['asset_pipeline']) {
+            return;
         }
+
+        $pipeline = $config['asset_pipeline'];
 
         if ('pentatrion_vite' === $pipeline && class_exists(EntrypointsLookupCollection::class)) {
             $this->registerExtractor($container, PentatrionViteAssetPipeline::class, $config['entrypoint']);
@@ -62,7 +63,7 @@ final class StorybookExtension extends Extension
             return;
         }
 
-        if ('encore' === $pipeline && class_exists(EntrypointLookupInterface::class)) {
+        if ('encore' === $pipeline && interface_exists(EntrypointLookupInterface::class)) {
             $this->registerExtractor($container, EncoreAssetPipeline::class, $config['entrypoint']);
 
             return;
@@ -75,23 +76,6 @@ final class StorybookExtension extends Extension
         }
 
         $this->registerExtractor($container, NullAssetPipeline::class, $config['entrypoint']);
-    }
-
-    private function detectPipeline(ContainerBuilder $container): string
-    {
-        if (class_exists(EntrypointsLookupCollection::class) && $container->has(EntrypointsLookupCollection::class)) {
-            return 'pentatrion_vite';
-        }
-
-        if (class_exists(EntrypointLookupInterface::class) && $container->has('webpack_encore.entrypoint_lookup_collection')) {
-            return 'encore';
-        }
-
-        if (class_exists(ImportMapGenerator::class) && $container->has(ImportMapGenerator::class)) {
-            return 'asset_mapper';
-        }
-
-        return 'none';
     }
 
     private function registerExtractor(ContainerBuilder $container, string $class, string $entrypoint): void
