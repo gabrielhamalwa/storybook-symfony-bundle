@@ -69,6 +69,17 @@ final readonly class AssetMapperPipeline implements AssetPipelineInterface, Asse
             }
         }
 
+        if (isset($rawImportMap[$this->entrypoint]['path']) && is_string($rawImportMap[$this->entrypoint]['path'])) {
+            $entrypointPath = $rawImportMap[$this->entrypoint]['path'];
+            $hasEntrypoint = [] !== array_filter(
+                $scripts,
+                static fn (AssetScript $script): bool => $script->src === $entrypointPath
+            );
+            if (!$hasEntrypoint) {
+                array_unshift($scripts, new AssetScript($entrypointPath, 'module', 'asset-mapper'));
+            }
+        }
+
         return new AssetCollection('asset-mapper', $scripts, $styles, $importmap);
     }
 }

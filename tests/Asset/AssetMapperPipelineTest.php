@@ -54,6 +54,22 @@ final class AssetMapperPipelineTest extends TestCase
         ], $pipeline->getAssets());
     }
 
+    public function testAlwaysIncludesEntrypointScript(): void
+    {
+        $generator = $this->createMock(ImportMapGenerator::class);
+        $generator->method('getRawImportMapData')->willReturn([
+            'app' => ['path' => '/assets/app-hash.js', 'type' => 'js'],
+            'other' => ['path' => '/assets/other-hash.js', 'type' => 'js'],
+        ]);
+        $generator->method('findEagerEntrypointImports')->with('app')->willReturn(['other']);
+
+        $collection = (new AssetMapperPipeline($generator, 'app'))->extract();
+
+        self::assertCount(2, $collection->scripts);
+        self::assertEquals('/assets/app-hash.js', $collection->scripts[0]->src);
+        self::assertEquals('/assets/other-hash.js', $collection->scripts[1]->src);
+    }
+
     public function testExtractIncludesFullImportmap(): void
     {
         $generator = $this->createMock(ImportMapGenerator::class);
