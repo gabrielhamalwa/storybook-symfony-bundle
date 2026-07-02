@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpKernel\Fragment\FragmentHandler;
 use Symfony\WebpackEncoreBundle\Asset\EntrypointLookupInterface;
 
 final class StorybookExtension extends Extension
@@ -36,6 +37,7 @@ final class StorybookExtension extends Extension
             $loader->load('services.php');
         }
 
+        $this->registerFragmentHandlerAlias($container);
         $this->registerAssetPipeline($container, $config);
     }
 
@@ -47,6 +49,13 @@ final class StorybookExtension extends Extension
     public function getAlias(): string
     {
         return 'storybook';
+    }
+
+    private function registerFragmentHandlerAlias(ContainerBuilder $container): void
+    {
+        if ($container->has('fragment.handler') && !$container->has(FragmentHandler::class)) {
+            $container->setAlias(FragmentHandler::class, 'fragment.handler');
+        }
     }
 
     private function registerAssetPipeline(ContainerBuilder $container, array $config): void

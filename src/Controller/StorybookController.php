@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace Storybook\SymfonyBundle\Controller;
 
 use Storybook\SymfonyBundle\Asset\AssetExtractorInterface;
+use Storybook\SymfonyBundle\Component\ComponentAdapterInterface;
+use Storybook\SymfonyBundle\Component\ControllerFragmentAdapter;
+use Storybook\SymfonyBundle\Component\LiveComponentAdapter;
+use Storybook\SymfonyBundle\Component\TemplateAdapter;
+use Storybook\SymfonyBundle\Component\TwigComponentAdapter;
 use Storybook\SymfonyBundle\Dto\AssetCollection;
 use Storybook\SymfonyBundle\Dto\AssetScript;
 use Storybook\SymfonyBundle\Dto\AssetStyle;
+use Storybook\SymfonyBundle\Dto\RenderRequest;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\UX\TwigComponent\ComponentRendererInterface;
 
 final readonly class StorybookController
 {
     public function __construct(
-        private ComponentRendererInterface $componentRenderer,
+        private TwigComponentAdapter $twigComponentAdapter,
+        private TemplateAdapter $templateAdapter,
+        private ControllerFragmentAdapter $controllerFragmentAdapter,
         private AssetExtractorInterface $assetExtractor,
+        private ?LiveComponentAdapter $liveComponentAdapter = null,
     ) {
     }
 
@@ -27,19 +35,14 @@ final readonly class StorybookController
         return new JsonResponse(['status' => 'ok']);
     }
 
-    #[Route('/_storybook/render/{id}', methods: ['POST'])]
+    #[Route('/_storybook/render/{id}', methods: ['POST'], defaults: ['_locale' => null])]
     public function render(string $id, Request $request): JsonResponse
     {
-        $payload = json_decode($request->getContent(), true) ?? [];
-        $componentId = $payload['componentId'] ?? null;
-        $args = $payload['args'] ?? [];
-
-        if (!is_string($componentId)) {
-            return new JsonResponse(['error' => 'Missing component ID'], 400);
-        }
+        $renderRequest = $this->parseRequest($request, $id);
 
         try {
-            $html = $this->componentRenderer->createAndRender($componentId, is_array($args) ? $args : []);
+            $adapter = $this->resolveAdapter($renderRequest);
+            $html = $adapter->render($renderRequest);
 
             return new JsonResponse([
                 'html' => $html,
@@ -48,6 +51,8 @@ final readonly class StorybookController
                     'component' => $id,
                 ],
             ]);
+        } catch (\InvalidArgumentException $exception) {
+            return new JsonResponse(['error' => $exception->getMessage()], 400);
         } catch (\Throwable $exception) {
             return new JsonResponse([
                 'error' => 'Failed to render component',
@@ -68,6 +73,56 @@ final readonly class StorybookController
     {
         // TODO: implement source extraction
         return new JsonResponse(['template' => null, 'class' => null]);
+    }
+
+    private function parseRequest(Request $request, string $id): RenderRequest
+    {
+        $payload = json_decode($request->getContent(), true) ?? [];
+        $args = $payload['args'] ?? [];
+        $globals = $payload['globals'] ?? [];
+
+        return new RenderRequest(
+            id: $id,
+            componentId: \is_string($payload['componentId'] ?? null) ? $payload['componentId'] : null,
+            adapter: \is_string($payload['adapter'] ?? null) ? $payload['adapter'] : null,
+            template: \is_string($payload['template'] ?? null) ? $payload['template'] : null,
+            controller: \is_string($payload['controller'] ?? null) ? $payload['controller'] : null,
+            args: \is_array($args) ? $args : [],
+            globals: \is_array($globals) ? $globals : [],
+        );
+    }
+
+    private function resolveAdapter(RenderRequest $request): ComponentAdapterInterface
+    {
+        $adapter = $request->adapter;
+
+        if ('template' === $adapter || (null === $adapter && (null !== $request->template || $this->isTemplatePath($request->componentId)))) {
+            return $this->templateAdapter;
+        }
+
+        if ('controller' === $adapter || (null === $adapter && (null !== $request->controller || $this->isControllerReference($request->componentId)))) {
+            return $this->controllerFragmentAdapter;
+        }
+
+        if ('live' === $adapter) {
+            if (null === $this->liveComponentAdapter) {
+                throw new \RuntimeException('Live component adapter is not available.');
+            }
+
+            return $this->liveComponentAdapter;
+        }
+
+        return $this->twigComponentAdapter;
+    }
+
+    private function isTemplatePath(?string $componentId): bool
+    {
+        return \is_string($componentId) && str_ends_with($componentId, '.twig');
+    }
+
+    private function isControllerReference(?string $componentId): bool
+    {
+        return \is_string($componentId) && str_contains($componentId, '::');
     }
 
     private function serializeAssets(AssetCollection $collection): array
