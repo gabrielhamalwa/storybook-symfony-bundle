@@ -8,12 +8,12 @@ Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=r
 
 This bundle is the PHP side of the Storybook Symfony/Twig integration. When you run Storybook with `@storybook/symfony-vite`, the frontend asks this bundle to:
 
-- Render a Twig component with a given set of props (`POST /_storybook/render/{id}`).
+- Render a Twig component, plain Twig template, controller fragment, or Symfony UX Live Component with a given set of args (`POST /_storybook/render/{id}`).
 - Return the styles and scripts that belong to the component's asset entrypoint.
 - Report health so the Storybook dev server knows the PHP backend is ready (`GET /_storybook/health`).
 - List discoverable components and expose source code for the docs panel (`GET /_storybook/index`, `GET /_storybook/source/{id}`).
 
-The bundle is intentionally small and relies on Symfony UX TwigComponent to render components.
+The bundle is intentionally small. It relies on Symfony UX TwigComponent by default and can also render plain Twig templates, controller fragments, and Symfony UX Live Components.
 
 ## Requirements
 
@@ -152,6 +152,19 @@ storybook:
   asset_pipeline: none
 ```
 
+## Component adapters
+
+The bundle can render four different kinds of components. The adapter is selected from the `adapter` field in the request body or auto-detected from the provided identifier:
+
+| Adapter | `adapter` value | Identifier / trigger | Notes |
+| --- | --- | --- | --- |
+| Twig component | `twig_component` (or omitted) | `componentId` such as `Button` | Default. Renders with Symfony UX TwigComponent. |
+| Plain Twig template | `template` | `componentId` ending in `.twig` or a `template` field | Renders the template directly with the story args as variables. |
+| Controller fragment | `controller` | `componentId` containing `::` or a `controller` field | Renders a Symfony controller fragment (`ControllerName::action`). |
+| Live component | `live` | `adapter: live` | Requires `symfony/ux-live-component`. Falls back to an error if the package is not installed. |
+
+When `adapter` is omitted, the bundle picks the first matching rule in this order: `template`, `controller`, `twig_component`. The `live` adapter must be requested explicitly.
+
 ## Endpoints
 
 All endpoints are mounted under the `/_storybook` prefix.
@@ -168,9 +181,20 @@ Returns a simple status object used by the Storybook framework to wait for the P
 
 ### `POST /_storybook/render/{id}`
 
-Renders the Twig component identified by `componentId` in the request body and returns the resulting HTML plus assets.
+Renders the component identified by the request body and returns the resulting HTML plus assets.
 
-Request body:
+Request body fields:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `componentId` | `string` | Yes for Twig and Live components; optional for template/controller | Component name, template path, or controller reference. |
+| `adapter` | `string` | No | Force a specific adapter: `twig_component`, `template`, `controller`, or `live`. |
+| `template` | `string` | Only when `adapter` is `template` | Twig template path. If it starts with `templates/`, the prefix is stripped. |
+| `controller` | `string` | Only when `adapter` is `controller` | Controller reference such as `App\Controller\AlertController::fragment`. |
+| `args` | `object` | No | Props passed to the component or template. |
+| `globals` | `object` | No | Additional global variables passed to the render context. |
+
+Twig component example:
 
 ```json
 {
@@ -178,6 +202,42 @@ Request body:
   "args": {
     "label": "Save",
     "variant": "primary"
+  }
+}
+```
+
+Plain template example:
+
+```json
+{
+  "componentId": "components/Alert.html.twig",
+  "adapter": "template",
+  "args": {
+    "message": "Saved successfully"
+  }
+}
+```
+
+Controller fragment example:
+
+```json
+{
+  "controller": "App\\Controller\\AlertController::fragment",
+  "adapter": "controller",
+  "args": {
+    "message": "Saved successfully"
+  }
+}
+```
+
+Live component example:
+
+```json
+{
+  "componentId": "Notification",
+  "adapter": "live",
+  "args": {
+    "message": "Saved successfully"
   }
 }
 ```
@@ -207,7 +267,7 @@ Response body:
 }
 ```
 
-The `id` path parameter is the Storybook story ID; the actual Twig component name is passed as `componentId` in the JSON body.
+The `id` path parameter is the Storybook story ID; the actual component identifier is passed in the JSON body.
 
 ### `GET /_storybook/index`
 
