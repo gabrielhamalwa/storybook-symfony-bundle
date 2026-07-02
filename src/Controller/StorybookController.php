@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Storybook\SymfonyBundle\Controller;
 
-use Storybook\SymfonyBundle\Asset\AssetPipelineInterface;
+use Storybook\SymfonyBundle\Asset\AssetExtractorInterface;
+use Storybook\SymfonyBundle\Dto\AssetCollection;
+use Storybook\SymfonyBundle\Dto\AssetScript;
+use Storybook\SymfonyBundle\Dto\AssetStyle;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,7 +17,7 @@ final readonly class StorybookController
 {
     public function __construct(
         private ComponentRendererInterface $componentRenderer,
-        private AssetPipelineInterface $assetPipeline,
+        private AssetExtractorInterface $assetExtractor,
     ) {
     }
 
@@ -40,7 +43,7 @@ final readonly class StorybookController
 
             return new JsonResponse([
                 'html' => $html,
-                'assets' => $this->assetPipeline->getAssets(),
+                'assets' => $this->serializeAssets($this->assetExtractor->extract()),
                 'metadata' => [
                     'component' => $id,
                 ],
@@ -65,5 +68,26 @@ final readonly class StorybookController
     {
         // TODO: implement source extraction
         return new JsonResponse(['template' => null, 'class' => null]);
+    }
+
+    private function serializeAssets(AssetCollection $collection): array
+    {
+        return [
+            'pipeline' => $collection->pipeline,
+            'styles' => array_map(
+                static fn (AssetStyle $style): array => ['url' => $style->href],
+                $collection->styles
+            ),
+            'scripts' => array_map(
+                static fn (AssetScript $script): array => [
+                    'url' => $script->src,
+                    'type' => $script->type,
+                    'async' => $script->async,
+                    'defer' => $script->defer,
+                ],
+                $collection->scripts
+            ),
+            'importmap' => $collection->importmap,
+        ];
     }
 }

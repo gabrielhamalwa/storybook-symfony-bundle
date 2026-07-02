@@ -17,7 +17,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame('storybook', $config['environment']);
         self::assertSame('%kernel.project_dir%', $config['project_dir']);
         self::assertSame('%kernel.project_dir%/public', $config['public_dir']);
-        self::assertSame('none', $config['asset_pipeline']);
+        self::assertSame('auto', $config['asset_pipeline']);
         self::assertSame('app', $config['entrypoint']);
     }
 

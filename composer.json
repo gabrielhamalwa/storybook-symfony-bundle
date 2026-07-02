@@ -24,8 +24,10 @@
   "require-dev": {
     "pentatrion/vite-bundle": "^8.0",
     "phpunit/phpunit": "^10.0 || ^11.0",
+    "symfony/asset-mapper": "^6.4 || ^7.0",
     "symfony/framework-bundle": "^6.4 || ^7.0",
     "symfony/twig-bundle": "^6.4 || ^7.0",
+    "symfony/webpack-encore-bundle": "^2.0",
     "symfony/yaml": "^6.4 || ^7.0"
   },
   "autoload": {

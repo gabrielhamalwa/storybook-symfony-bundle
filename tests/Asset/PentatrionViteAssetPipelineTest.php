@@ -21,7 +21,12 @@ final class PentatrionViteAssetPipelineTest extends TestCase
 
         $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
 
-        self::assertSame(['styles' => [], 'scripts' => []], $pipeline->getAssets());
+        self::assertSame([
+            'pipeline' => 'pentatrion-vite',
+            'styles' => [],
+            'scripts' => [],
+            'importmap' => null,
+        ], $pipeline->getAssets());
     }
 
     public function testReturnsNormalizedAssetsForEntrypoint(): void
@@ -38,8 +43,10 @@ final class PentatrionViteAssetPipelineTest extends TestCase
         $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
 
         self::assertSame([
+            'pipeline' => 'pentatrion-vite',
             'styles' => [['url' => '/build/assets/app.css']],
             'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
+            'importmap' => null,
         ], $pipeline->getAssets());
     }
 
@@ -57,8 +64,10 @@ final class PentatrionViteAssetPipelineTest extends TestCase
         $pipeline = new PentatrionViteAssetPipeline($collection, 'storybook');
 
         self::assertSame([
+            'pipeline' => 'pentatrion-vite',
             'styles' => [],
             'scripts' => [['url' => '/build/assets/storybook.js', 'type' => 'module']],
+            'importmap' => null,
         ], $pipeline->getAssets());
     }
 }

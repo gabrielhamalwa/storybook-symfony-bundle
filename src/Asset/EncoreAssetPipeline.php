@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Storybook\SymfonyBundle\Asset;
 
-use Pentatrion\ViteBundle\Service\EntrypointsLookupCollection;
 use Storybook\SymfonyBundle\Dto\AssetCollection;
 use Storybook\SymfonyBundle\Dto\AssetScript;
 use Storybook\SymfonyBundle\Dto\AssetStyle;
+use Symfony\WebpackEncoreBundle\Asset\EntrypointLookupInterface;
 
-final readonly class PentatrionViteAssetPipeline implements AssetPipelineInterface, AssetExtractorInterface
+final readonly class EncoreAssetPipeline implements AssetPipelineInterface, AssetExtractorInterface
 {
     public function __construct(
-        private EntrypointsLookupCollection $entrypointsLookupCollection,
+        private EntrypointLookupInterface $entrypointLookup,
         private string $entrypoint = 'app',
     ) {
     }
@@ -31,30 +31,28 @@ final readonly class PentatrionViteAssetPipeline implements AssetPipelineInterfa
                 static fn (AssetScript $script): array => ['url' => $script->src, 'type' => $script->type],
                 $collection->scripts
             ),
-            'importmap' => $collection->importmap,
         ];
     }
 
     public function extract(): AssetCollection
     {
-        $lookup = $this->entrypointsLookupCollection->getEntrypointsLookup();
-
-        if (!$lookup->hasFile()) {
-            return new AssetCollection('pentatrion-vite');
+        try {
+            $cssFiles = $this->entrypointLookup->getCssFiles($this->entrypoint);
+            $jsFiles = $this->entrypointLookup->getJavaScriptFiles($this->entrypoint);
+        } catch (\Throwable) {
+            return new AssetCollection('webpack-encore');
         }
 
-        $base = $lookup->getBase();
-
         $styles = [];
-        foreach ($lookup->getCSSFiles($this->entrypoint) as $cssFile) {
-            $styles[] = new AssetStyle($base.$cssFile, 'pentatrion-vite');
+        foreach ($cssFiles as $cssFile) {
+            $styles[] = new AssetStyle($cssFile, 'webpack-encore');
         }
 
         $scripts = [];
-        foreach ($lookup->getJSFiles($this->entrypoint) as $jsFile) {
-            $scripts[] = new AssetScript($base.$jsFile, 'module', 'pentatrion-vite');
+        foreach ($jsFiles as $jsFile) {
+            $scripts[] = new AssetScript($jsFile, 'module', 'webpack-encore');
         }
 
-        return new AssetCollection('pentatrion-vite', $scripts, $styles);
+        return new AssetCollection('webpack-encore', $scripts, $styles);
     }
 }

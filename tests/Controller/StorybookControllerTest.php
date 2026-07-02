@@ -43,6 +43,9 @@ final class StorybookControllerTest extends TestCase
         $payload = json_decode($response->getContent(), true);
         self::assertSame('<button>Click me</button>', $payload['html']);
         self::assertSame('button--primary', $payload['metadata']['component']);
+        self::assertSame('none', $payload['assets']['pipeline']);
+        self::assertSame([], $payload['assets']['styles']);
+        self::assertSame([], $payload['assets']['scripts']);
     }
 
     public function testRenderReturnsBadRequestWithoutComponentId(): void

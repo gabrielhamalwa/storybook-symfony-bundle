@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace Storybook\SymfonyBundle\Asset;
 
-final class NullAssetPipeline implements AssetPipelineInterface
+use Storybook\SymfonyBundle\Dto\AssetCollection;
+
+final class NullAssetPipeline implements AssetPipelineInterface, AssetExtractorInterface
 {
     public function getAssets(): array
     {
         return [
+            'pipeline' => 'none',
             'styles' => [],
             'scripts' => [],
         ];
+    }
+
+    public function extract(): AssetCollection
+    {
+        return new AssetCollection('none');
     }
 }
