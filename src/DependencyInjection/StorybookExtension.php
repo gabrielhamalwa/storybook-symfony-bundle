@@ -12,6 +12,8 @@ use Storybook\SymfonyBundle\Asset\EncoreAssetPipeline;
 use Storybook\SymfonyBundle\Asset\NullAssetPipeline;
 use Storybook\SymfonyBundle\Asset\PentatrionViteAssetPipeline;
 use Storybook\SymfonyBundle\Controller\StorybookController;
+use Storybook\SymfonyBundle\Indexer\ComponentIndexer;
+use Storybook\SymfonyBundle\Indexer\ComponentIndexerInterface;
 use Symfony\Component\AssetMapper\ImportMap\ImportMapGenerator;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -29,6 +31,9 @@ final class StorybookExtension extends Extension
 
         $container->setParameter('storybook.asset_pipeline', $config['asset_pipeline']);
         $container->setParameter('storybook.entrypoint', $config['entrypoint']);
+        $container->setParameter('storybook.component_paths', $config['component_paths']);
+        $container->setParameter('storybook.template_dir', $config['template_dir']);
+        $container->setParameter('storybook.title_prefix', $config['title_prefix']);
 
         $configPath = \dirname(__DIR__).'/Resources/config';
 
@@ -39,6 +44,7 @@ final class StorybookExtension extends Extension
 
         $this->registerFragmentHandlerAlias($container);
         $this->registerAssetPipeline($container, $config);
+        $this->registerComponentIndexer($container, $config);
     }
 
     public function getConfiguration(array $config, ContainerBuilder $container): Configuration
@@ -98,5 +104,16 @@ final class StorybookExtension extends Extension
             ->setArgument('$entrypoint', $entrypoint);
 
         $container->setAlias(AssetPipelineInterface::class, AssetExtractorInterface::class);
+    }
+
+    private function registerComponentIndexer(ContainerBuilder $container, array $config): void
+    {
+        $container
+            ->register(ComponentIndexerInterface::class, ComponentIndexer::class)
+            ->setAutowired(true)
+            ->setArgument('$projectDir', $config['project_dir'])
+            ->setArgument('$componentPaths', $config['component_paths'])
+            ->setArgument('$templateDir', $config['template_dir'])
+            ->setArgument('$titlePrefix', $config['title_prefix']);
     }
 }

@@ -10,6 +10,7 @@ use Storybook\SymfonyBundle\Component\ControllerFragmentAdapter;
 use Storybook\SymfonyBundle\Component\TemplateAdapter;
 use Storybook\SymfonyBundle\Component\TwigComponentAdapter;
 use Storybook\SymfonyBundle\Controller\StorybookController;
+use Storybook\SymfonyBundle\Indexer\ComponentIndexerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Fragment\FragmentHandler;
 use Symfony\UX\TwigComponent\ComponentRendererInterface;
@@ -21,6 +22,7 @@ final class StorybookControllerTest extends TestCase
         ComponentRendererInterface $renderer,
         ?Environment $twig = null,
         ?FragmentHandler $fragmentHandler = null,
+        ?ComponentIndexerInterface $componentIndexer = null,
     ): StorybookController {
         $twig ??= $this->createMock(Environment::class);
         $fragmentHandler ??= $this->createMock(FragmentHandler::class);
@@ -30,6 +32,8 @@ final class StorybookControllerTest extends TestCase
             new TemplateAdapter($twig),
             new ControllerFragmentAdapter($fragmentHandler),
             new NullAssetPipeline(),
+            null,
+            $componentIndexer,
         );
     }
 
@@ -196,5 +200,115 @@ final class StorybookControllerTest extends TestCase
         $response = $controller->render('alert-fragment--default', $request);
 
         self::assertSame(400, $response->getStatusCode());
+    }
+
+    public function testIndexReturnsEmptyArrayWhenIndexerIsUnavailable(): void
+    {
+        $controller = $this->createController($this->createMock(ComponentRendererInterface::class));
+
+        $response = $controller->index();
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true);
+        self::assertSame([], $payload['components']);
+    }
+
+    public function testIndexReturnsComponentsFromIndexer(): void
+    {
+        $indexer = $this->createMock(ComponentIndexerInterface::class);
+        $indexer
+            ->method('index')
+            ->willReturn([
+                [
+                    'id' => 'Button',
+                    'type' => 'twig_component',
+                    'title' => 'Components/Button',
+                    'template' => 'templates/components/Button.html.twig',
+                    'class' => 'App\\Twig\\Components\\Button',
+                    'props' => [],
+                ],
+            ]);
+
+        $controller = $this->createController(
+            $this->createMock(ComponentRendererInterface::class),
+            null,
+            null,
+            $indexer,
+        );
+
+        $response = $controller->index();
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true);
+        self::assertCount(1, $payload['components']);
+        self::assertSame('Button', $payload['components'][0]['id']);
+    }
+
+    public function testIndexReturnsErrorWhenIndexerThrows(): void
+    {
+        $indexer = $this->createMock(ComponentIndexerInterface::class);
+        $indexer
+            ->method('index')
+            ->willThrowException(new \RuntimeException('Indexing failed'));
+
+        $controller = $this->createController(
+            $this->createMock(ComponentRendererInterface::class),
+            null,
+            null,
+            $indexer,
+        );
+
+        $response = $controller->index();
+
+        self::assertSame(500, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true);
+        self::assertSame('Indexing failed', $payload['message']);
+    }
+
+    public function testSourceReturnsTemplateAndClassSource(): void
+    {
+        $indexer = $this->createMock(ComponentIndexerInterface::class);
+        $indexer
+            ->method('getComponentSource')
+            ->with('Button')
+            ->willReturn([
+                'template' => '<button>Button</button>',
+                'class' => '<?php class Button {}',
+            ]);
+
+        $controller = $this->createController(
+            $this->createMock(ComponentRendererInterface::class),
+            null,
+            null,
+            $indexer,
+        );
+
+        $response = $controller->source('Button');
+
+        self::assertSame(200, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true);
+        self::assertSame('<button>Button</button>', $payload['template']);
+        self::assertSame('<?php class Button {}', $payload['class']);
+    }
+
+    public function testSourceReturnsErrorWhenIndexerThrows(): void
+    {
+        $indexer = $this->createMock(ComponentIndexerInterface::class);
+        $indexer
+            ->method('getComponentSource')
+            ->willThrowException(new \RuntimeException('Source failed'));
+
+        $controller = $this->createController(
+            $this->createMock(ComponentRendererInterface::class),
+            null,
+            null,
+            $indexer,
+        );
+
+        $response = $controller->source('Button');
+
+        self::assertSame(500, $response->getStatusCode());
+        $payload = json_decode($response->getContent(), true);
+        self::assertSame('Source failed', $payload['message']);
     }
 }

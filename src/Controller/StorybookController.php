@@ -14,6 +14,7 @@ use Storybook\SymfonyBundle\Dto\AssetCollection;
 use Storybook\SymfonyBundle\Dto\AssetScript;
 use Storybook\SymfonyBundle\Dto\AssetStyle;
 use Storybook\SymfonyBundle\Dto\RenderRequest;
+use Storybook\SymfonyBundle\Indexer\ComponentIndexerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -26,6 +27,7 @@ final readonly class StorybookController
         private ControllerFragmentAdapter $controllerFragmentAdapter,
         private AssetExtractorInterface $assetExtractor,
         private ?LiveComponentAdapter $liveComponentAdapter = null,
+        private ?ComponentIndexerInterface $componentIndexer = null,
     ) {
     }
 
@@ -64,15 +66,37 @@ final readonly class StorybookController
     #[Route('/_storybook/index', methods: ['GET'])]
     public function index(): JsonResponse
     {
-        // TODO: implement component discovery
-        return new JsonResponse(['components' => []]);
+        if (null === $this->componentIndexer) {
+            return new JsonResponse(['components' => []]);
+        }
+
+        try {
+            return new JsonResponse(['components' => $this->componentIndexer->index()]);
+        } catch (\Throwable $exception) {
+            return new JsonResponse([
+                'error' => 'Failed to index components',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
     }
 
     #[Route('/_storybook/source/{id}', methods: ['GET'])]
     public function source(string $id): JsonResponse
     {
-        // TODO: implement source extraction
-        return new JsonResponse(['template' => null, 'class' => null]);
+        if (null === $this->componentIndexer) {
+            return new JsonResponse(['template' => null, 'class' => null]);
+        }
+
+        try {
+            $source = $this->componentIndexer->getComponentSource($id);
+
+            return new JsonResponse($source);
+        } catch (\Throwable $exception) {
+            return new JsonResponse([
+                'error' => 'Failed to read source',
+                'message' => $exception->getMessage(),
+            ], 500);
+        }
     }
 
     private function parseRequest(Request $request, string $id): RenderRequest

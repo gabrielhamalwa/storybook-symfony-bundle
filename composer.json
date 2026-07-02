@@ -37,7 +37,8 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Storybook\\SymfonyBundle\\Tests\\": "tests/"
+      "Storybook\\SymfonyBundle\\Tests\\": "tests/",
+      "Storybook\\SymfonyBundle\\Tests\\Fixtures\\": "tests/Fixtures/"
     }
   }
 }
