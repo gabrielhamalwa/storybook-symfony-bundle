@@ -40,5 +40,8 @@
       "Storybook\\SymfonyBundle\\Tests\\": "tests/",
       "Storybook\\SymfonyBundle\\Tests\\Fixtures\\": "tests/Fixtures/"
     }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
   }
 }
