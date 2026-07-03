@@ -24,11 +24,14 @@ final class ComponentIndexerTest extends TestCase
         $indexer = $this->createIndexer();
         $components = $indexer->index();
 
-        self::assertCount(2, $components);
+        self::assertCount(5, $components);
 
         $ids = array_map(static fn (array $component): string => $component['id'], $components);
         self::assertContains('Alert', $ids);
         self::assertContains('Button', $ids);
+        self::assertContains('Card', $ids);
+        self::assertContains('Message', $ids);
+        self::assertContains('LiveCounter', $ids);
     }
 
     public function testIndexExtractsPropsFromPublicProperties(): void
@@ -99,6 +102,77 @@ final class ComponentIndexerTest extends TestCase
         self::assertSame('string', $type['type']);
         self::assertFalse($type['required']);
         self::assertSame('info', $type['default']);
+    }
+
+    public function testIndexExtractsPropsFromTwigBlock(): void
+    {
+        $indexer = $this->createIndexer();
+        $components = $indexer->index();
+
+        $card = null;
+        foreach ($components as $component) {
+            if ('Card' === $component['id']) {
+                $card = $component;
+
+                break;
+            }
+        }
+
+        self::assertNotNull($card);
+        self::assertSame('templates/components/Card.html.twig', $card['template']);
+
+        $props = $card['props'];
+        self::assertCount(3, $props);
+
+        $title = $this->findProp($props, 'title');
+        self::assertNotNull($title);
+        self::assertSame('string', $title['type']);
+        self::assertFalse($title['required']);
+        self::assertSame('Card', $title['default']);
+
+        $theme = $this->findProp($props, 'theme');
+        self::assertNotNull($theme);
+        self::assertSame('string', $theme['type']);
+        self::assertFalse($theme['required']);
+        self::assertSame('dark', $theme['default']);
+
+        $items = $this->findProp($props, 'items');
+        self::assertNotNull($items);
+        self::assertSame('array', $items['type']);
+        self::assertFalse($items['required']);
+        self::assertSame([], $items['default']);
+    }
+
+    public function testIndexMergesTwigPropsOverPhpProps(): void
+    {
+        $indexer = $this->createIndexer();
+        $components = $indexer->index();
+
+        $message = null;
+        foreach ($components as $component) {
+            if ('Message' === $component['id']) {
+                $message = $component;
+
+                break;
+            }
+        }
+
+        self::assertNotNull($message);
+
+        $props = $message['props'];
+        self::assertCount(2, $props);
+
+        $content = $this->findProp($props, 'message');
+        self::assertNotNull($content);
+        self::assertSame('string', $content['type']);
+        self::assertTrue($content['required']);
+        self::assertNull($content['default']);
+
+        $type = $this->findProp($props, 'type');
+        self::assertNotNull($type);
+        self::assertSame('string', $type['type']);
+        self::assertFalse($type['required']);
+        self::assertSame('warning', $type['default']);
     }
 
     public function testFindComponentReturnsMatchingComponent(): void

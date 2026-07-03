@@ -132,6 +132,7 @@ final class ComponentIndexer implements ComponentIndexerInterface
         $componentName = $config['key'] ?? $this->deriveComponentNameFromClass($reflection);
         $templatePath = $config['template'] ?? $this->deriveDefaultTemplatePath($componentName);
         $props = $this->extractProps($reflection);
+        $props = $this->mergeTwigProps($props, $templatePath);
 
         return [
             'id' => $componentName,
@@ -259,6 +260,44 @@ final class ComponentIndexer implements ComponentIndexerInterface
         }
 
         return $prop;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $phpProps
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function mergeTwigProps(array $phpProps, string $templatePath): array
+    {
+        $absoluteTemplatePath = $this->resolveAbsoluteTemplatePath($templatePath);
+
+        if (null === $absoluteTemplatePath) {
+            return $phpProps;
+        }
+
+        $templateSource = file_get_contents($absoluteTemplatePath);
+
+        if (false === $templateSource) {
+            return $phpProps;
+        }
+
+        $twigProps = TwigPropsParser::parse($templateSource);
+
+        if ([] === $twigProps) {
+            return $phpProps;
+        }
+
+        foreach ($twigProps as $twigProp) {
+            $index = $this->findPropIndex($phpProps, $twigProp['name']);
+
+            if (null === $index) {
+                $phpProps[] = $twigProp;
+            } else {
+                $phpProps[$index] = $twigProp;
+            }
+        }
+
+        return $phpProps;
     }
 
     /**
