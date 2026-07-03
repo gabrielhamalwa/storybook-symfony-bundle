@@ -1,0 +1,75 @@
+# Component adapters
+
+The bundle can render four different kinds of components. The adapter is selected from the `adapter` field in the request body or auto-detected from the provided identifier:
+
+| Adapter | `adapter` value | Identifier / trigger | Notes |
+| --- | --- | --- | --- |
+| Twig component | `twig_component` (or omitted) | `componentId` such as `Button` | Default. Renders with Symfony UX TwigComponent. |
+| Plain Twig template | `template` | `componentId` ending in `.twig` or a `template` field | Renders the template directly with the story args as variables. |
+| Controller fragment | `controller` | `componentId` containing `::` or a `controller` field | Renders a Symfony controller fragment (`ControllerName::action`). |
+| Live component | `live` | `adapter: live` or the renderer sends `adapter: live` when `live: true` is set | Renders a Symfony UX Live Component. Requires `symfony/ux-live-component`. |
+
+When `adapter` is omitted, the bundle picks the first matching rule in this order: `template`, `controller`, `twig_component`. The `live` adapter must be requested explicitly.
+
+## Twig component
+
+The default adapter. The `componentId` is the Twig component name registered with `#[AsTwigComponent('Button')]`.
+
+Request body:
+
+```json
+{
+  "componentId": "Button",
+  "args": {
+    "label": "Save",
+    "variant": "primary"
+  }
+}
+```
+
+## Plain Twig template
+
+Use the template path as the `componentId` or set `adapter: template` with a `template` field. The story args become Twig variables.
+
+Request body:
+
+```json
+{
+  "componentId": "components/Alert.html.twig",
+  "args": {
+    "message": "Saved successfully"
+  }
+}
+```
+
+## Controller fragment
+
+Use the controller reference as the `componentId` or set `adapter: controller` with a `controller` field.
+
+Request body:
+
+```json
+{
+  "controller": "App\\Controller\\AlertController::fragment",
+  "adapter": "controller",
+  "args": {
+    "message": "Saved successfully"
+  }
+}
+```
+
+## Live component
+
+Requires `symfony/ux-live-component`. The renderer sends `adapter: live` when the story sets `parameters.symfony.live: true`. The backend renders the live component markup; reactivity is provided by the component itself.
+
+Request body:
+
+```json
+{
+  "componentId": "Notification",
+  "adapter": "live",
+  "args": {
+    "message": "Saved successfully"
+  }
+}
+```

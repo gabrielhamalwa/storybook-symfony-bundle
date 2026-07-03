@@ -4,6 +4,18 @@ Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig fr
 
 Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=readme).
 
+## Documentation
+
+Full documentation is in the [`docs`](./docs) directory:
+
+- [Overview](./docs/index.md)
+- [Installation](./docs/installation.md)
+- [Configuration](./docs/configuration.md)
+- [Component adapters](./docs/adapters.md)
+- [Asset pipelines](./docs/asset-pipelines.md)
+- [Endpoints](./docs/endpoints.md)
+- [Development](./docs/development.md)
+
 ## What it does
 
 This bundle is the PHP side of the Storybook Symfony/Twig integration. When you run Storybook with `@storybook/symfony-vite`, the frontend asks this bundle to:
