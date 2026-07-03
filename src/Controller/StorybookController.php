@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace Storybook\SymfonyBundle\Controller;
 
 use Storybook\SymfonyBundle\Asset\AssetExtractorInterface;
-use Storybook\SymfonyBundle\Component\ComponentAdapterInterface;
-use Storybook\SymfonyBundle\Component\ControllerFragmentAdapter;
-use Storybook\SymfonyBundle\Component\LiveComponentAdapter;
-use Storybook\SymfonyBundle\Component\TemplateAdapter;
-use Storybook\SymfonyBundle\Component\TwigComponentAdapter;
+use Storybook\SymfonyBundle\Component\ComponentResolver;
 use Storybook\SymfonyBundle\Dto\AssetCollection;
 use Storybook\SymfonyBundle\Dto\AssetScript;
 use Storybook\SymfonyBundle\Dto\AssetStyle;
 use Storybook\SymfonyBundle\Dto\RenderRequest;
+use Storybook\SymfonyBundle\Dto\RenderResponse;
 use Storybook\SymfonyBundle\Indexer\ComponentIndexerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,11 +19,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final readonly class StorybookController
 {
     public function __construct(
-        private TwigComponentAdapter $twigComponentAdapter,
-        private TemplateAdapter $templateAdapter,
-        private ControllerFragmentAdapter $controllerFragmentAdapter,
+        private ComponentResolver $componentResolver,
         private AssetExtractorInterface $assetExtractor,
-        private ?LiveComponentAdapter $liveComponentAdapter = null,
         private ?ComponentIndexerInterface $componentIndexer = null,
     ) {
     }
@@ -43,16 +37,18 @@ final readonly class StorybookController
         $renderRequest = $this->parseRequest($request, $id);
 
         try {
-            $adapter = $this->resolveAdapter($renderRequest);
+            $adapter = $this->componentResolver->resolve($renderRequest);
             $html = $adapter->render($renderRequest);
 
-            return new JsonResponse([
-                'html' => $html,
-                'assets' => $this->serializeAssets($this->assetExtractor->extract()),
-                'metadata' => [
+            $response = new RenderResponse(
+                html: $html,
+                assets: $this->serializeAssets($this->assetExtractor->extract()),
+                metadata: [
                     'component' => $id,
                 ],
-            ]);
+            );
+
+            return new JsonResponse($response->toArray());
         } catch (\InvalidArgumentException $exception) {
             return new JsonResponse(['error' => $exception->getMessage()], 400);
         } catch (\Throwable $exception) {
@@ -114,39 +110,6 @@ final readonly class StorybookController
             args: \is_array($args) ? $args : [],
             globals: \is_array($globals) ? $globals : [],
         );
-    }
-
-    private function resolveAdapter(RenderRequest $request): ComponentAdapterInterface
-    {
-        $adapter = $request->adapter;
-
-        if ('template' === $adapter || (null === $adapter && (null !== $request->template || $this->isTemplatePath($request->componentId)))) {
-            return $this->templateAdapter;
-        }
-
-        if ('controller' === $adapter || (null === $adapter && (null !== $request->controller || $this->isControllerReference($request->componentId)))) {
-            return $this->controllerFragmentAdapter;
-        }
-
-        if ('live' === $adapter) {
-            if (null === $this->liveComponentAdapter) {
-                throw new \RuntimeException('Live component adapter is not available.');
-            }
-
-            return $this->liveComponentAdapter;
-        }
-
-        return $this->twigComponentAdapter;
-    }
-
-    private function isTemplatePath(?string $componentId): bool
-    {
-        return \is_string($componentId) && str_ends_with($componentId, '.twig');
-    }
-
-    private function isControllerReference(?string $componentId): bool
-    {
-        return \is_string($componentId) && str_contains($componentId, '::');
     }
 
     private function serializeAssets(AssetCollection $collection): array

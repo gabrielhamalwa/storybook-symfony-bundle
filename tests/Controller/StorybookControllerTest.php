@@ -6,6 +6,7 @@ namespace Storybook\SymfonyBundle\Tests\Controller;
 
 use PHPUnit\Framework\TestCase;
 use Storybook\SymfonyBundle\Asset\NullAssetPipeline;
+use Storybook\SymfonyBundle\Component\ComponentResolver;
 use Storybook\SymfonyBundle\Component\ControllerFragmentAdapter;
 use Storybook\SymfonyBundle\Component\TemplateAdapter;
 use Storybook\SymfonyBundle\Component\TwigComponentAdapter;
@@ -28,11 +29,13 @@ final class StorybookControllerTest extends TestCase
         $fragmentHandler ??= $this->createMock(FragmentHandler::class);
 
         return new StorybookController(
-            new TwigComponentAdapter($renderer),
-            new TemplateAdapter($twig),
-            new ControllerFragmentAdapter($fragmentHandler),
+            new ComponentResolver(
+                new TwigComponentAdapter($renderer),
+                new TemplateAdapter($twig),
+                new ControllerFragmentAdapter($fragmentHandler),
+                null,
+            ),
             new NullAssetPipeline(),
-            null,
             $componentIndexer,
         );
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Storybook\SymfonyBundle\Indexer;
 
+use Storybook\SymfonyBundle\Dto\ComponentMetadata;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 final class ComponentIndexer implements ComponentIndexerInterface
@@ -36,15 +37,15 @@ final class ComponentIndexer implements ComponentIndexerInterface
             $components = array_merge($components, $this->scanDirectory($path));
         }
 
-        usort($components, static fn (array $a, array $b): int => $a['id'] <=> $b['id']);
+        usort($components, static fn (ComponentMetadata $a, ComponentMetadata $b): int => $a->id <=> $b->id);
 
-        return $components;
+        return array_map(static fn (ComponentMetadata $metadata): array => $metadata->toArray(), $components);
     }
 
-    public function findComponent(string $id): ?array
+    public function findComponent(string $id): ?ComponentMetadata
     {
-        foreach ($this->index() as $component) {
-            if ($component['id'] === $id) {
+        foreach ($this->scanAll() as $component) {
+            if ($component->id === $id) {
                 return $component;
             }
         }
@@ -60,8 +61,8 @@ final class ComponentIndexer implements ComponentIndexerInterface
             return ['template' => null, 'class' => null];
         }
 
-        $templatePath = $this->resolveAbsoluteTemplatePath($component['template'] ?? null);
-        $classPath = $this->resolveClassPath($component['class'] ?? null);
+        $templatePath = $this->resolveAbsoluteTemplatePath($component->template);
+        $classPath = $this->resolveClassPath($component->class);
 
         return [
             'template' => $templatePath && is_file($templatePath) ? file_get_contents($templatePath) : null,
@@ -70,7 +71,7 @@ final class ComponentIndexer implements ComponentIndexerInterface
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<ComponentMetadata>
      */
     private function scanDirectory(string $relativePath): array
     {
@@ -102,9 +103,20 @@ final class ComponentIndexer implements ComponentIndexerInterface
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return list<ComponentMetadata>
      */
-    private function extractComponentMetadata(string $filePath): ?array
+    private function scanAll(): array
+    {
+        $components = [];
+
+        foreach ($this->componentPaths as $path) {
+            $components = array_merge($components, $this->scanDirectory($path));
+        }
+
+        return $components;
+    }
+
+    private function extractComponentMetadata(string $filePath): ?ComponentMetadata
     {
         $className = $this->extractClassName($filePath);
 
@@ -134,14 +146,14 @@ final class ComponentIndexer implements ComponentIndexerInterface
         $props = $this->extractProps($reflection);
         $props = $this->mergeTwigProps($props, $templatePath);
 
-        return [
-            'id' => $componentName,
-            'type' => $isLive ? 'live_component' : 'twig_component',
-            'title' => $this->titlePrefix.'/'.$componentName,
-            'template' => $templatePath,
-            'class' => $className,
-            'props' => $props,
-        ];
+        return new ComponentMetadata(
+            id: $componentName,
+            type: $isLive ? 'live_component' : 'twig_component',
+            title: $this->titlePrefix.'/'.$componentName,
+            template: $templatePath,
+            class: $className,
+            props: $props,
+        );
     }
 
     private function findAttribute(\ReflectionClass $reflection, string $attributeClass): ?object

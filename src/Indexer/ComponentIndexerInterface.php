@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Storybook\SymfonyBundle\Indexer;
 
+use Storybook\SymfonyBundle\Dto\ComponentMetadata;
+
 interface ComponentIndexerInterface
 {
     /**
@@ -15,10 +17,8 @@ interface ComponentIndexerInterface
 
     /**
      * Find a component by its id (component name).
-     *
-     * @return array<string, mixed>|null
      */
-    public function findComponent(string $id): ?array;
+    public function findComponent(string $id): ?ComponentMetadata;
 
     /**
      * Return the Twig template and PHP class source for a component id.

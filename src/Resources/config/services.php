@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Storybook\SymfonyBundle\Component\ComponentResolver;
 use Storybook\SymfonyBundle\Component\ControllerFragmentAdapter;
 use Storybook\SymfonyBundle\Component\LiveComponentAdapter;
 use Storybook\SymfonyBundle\Component\TemplateAdapter;
@@ -27,6 +28,9 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services
         ->set(LiveComponentAdapter::class);
+
+    $services
+        ->set(ComponentResolver::class);
 
     $services
         ->set(StorybookController::class)

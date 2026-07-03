@@ -181,7 +181,7 @@ final class ComponentIndexerTest extends TestCase
         $component = $indexer->findComponent('Button');
 
         self::assertNotNull($component);
-        self::assertSame('Button', $component['id']);
+        self::assertSame('Button', $component->id);
     }
 
     public function testFindComponentReturnsNullForUnknownComponent(): void
