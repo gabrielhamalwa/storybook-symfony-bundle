@@ -47,14 +47,23 @@ final readonly class PentatrionViteAssetPipeline implements AssetPipelineInterfa
 
         $styles = [];
         foreach ($lookup->getCSSFiles($this->entrypoint) as $cssFile) {
-            $styles[] = new AssetStyle($base.$cssFile, 'pentatrion-vite');
+            $styles[] = new AssetStyle($this->resolveAssetUrl($base, $cssFile), 'pentatrion-vite');
         }
 
         $scripts = [];
         foreach ($lookup->getJSFiles($this->entrypoint) as $jsFile) {
-            $scripts[] = new AssetScript($base.$jsFile, 'module', 'pentatrion-vite');
+            $scripts[] = new AssetScript($this->resolveAssetUrl($base, $jsFile), 'module', 'pentatrion-vite');
         }
 
         return new AssetCollection('pentatrion-vite', $scripts, $styles);
+    }
+
+    private function resolveAssetUrl(string $base, string $file): string
+    {
+        if (str_starts_with($file, 'http://') || str_starts_with($file, 'https://')) {
+            return $file;
+        }
+
+        return $base.$file;
     }
 }
