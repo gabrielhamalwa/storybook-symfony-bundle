@@ -67,19 +67,33 @@ framework:
     enabled: false
 ```
 
-You also need Twig and TwigComponent enabled in that environment:
+You also need Twig, TwigComponent, and Stimulus enabled in that environment:
 
 ```yaml
 # config/packages/storybook/twig.yaml
 twig:
   default_path: '%kernel.project_dir%/templates'
-  form_themes: ['tailwind_layout.html.twig']
 
 # config/packages/storybook/twig_component.yaml
 twig_component:
   anonymous_template_directory: 'components/'
   defaults:
-    App\Twig\Components\: '%kernel.project_dir%/src/Twig/Components'
+    App\Twig\Components\: 'components/'
+
+# config/packages/storybook/stimulus.yaml
+stimulus:
+  controllers_path: '%kernel.project_dir%/assets/controllers'
+  controller_jsons_path: '%kernel.project_dir%/assets/controllers.json'
+```
+
+If you use AssetMapper, also add `config/packages/storybook/assets.yaml`:
+
+```yaml
+framework:
+  asset_mapper:
+    paths:
+      assets/
+    importmap_path: '%kernel.project_dir%/importmap.php'
 ```
 
 ## Bundle configuration
@@ -161,7 +175,7 @@ The bundle can render four different kinds of components. The adapter is selecte
 | Twig component | `twig_component` (or omitted) | `componentId` such as `Button` | Default. Renders with Symfony UX TwigComponent. |
 | Plain Twig template | `template` | `componentId` ending in `.twig` or a `template` field | Renders the template directly with the story args as variables. |
 | Controller fragment | `controller` | `componentId` containing `::` or a `controller` field | Renders a Symfony controller fragment (`ControllerName::action`). |
-| Live component | `live` | `adapter: live` | Requires `symfony/ux-live-component`. Falls back to an error if the package is not installed. |
+| Live component | `live` | `adapter: live` or the renderer sends `adapter: live` when `live: true` is set | Requires `symfony/ux-live-component`. Falls back to an error if the package is not installed. |
 
 When `adapter` is omitted, the bundle picks the first matching rule in this order: `template`, `controller`, `twig_component`. The `live` adapter must be requested explicitly.
 
@@ -289,6 +303,14 @@ Reserved for the docs panel source extractor. Currently returns an empty respons
   "class": null
 }
 ```
+
+## Migration
+
+If you are migrating from an iframe-based Symfony/Storybook integration such as `sensiolabs/StorybookBundle`, read the Storybook framework's [migration guide](https://github.com/storybookjs/storybook/blob/next/docs/get-started/frameworks/symfony-vite-migration.mdx). It covers removing iframe patches, migrating `.stories.json` files to `.stories.ts`, and configuring the minimal `storybook` environment shown above.
+
+## RFC and release plan
+
+The architecture, component adapters, asset pipelines, server backends, and proposed alpha/beta/RC timeline are documented in the [RFC](https://github.com/storybookjs/storybook/blob/next/.devin/plans/RFC.md). The Composer bundle is part of that proposal and will be released in lockstep with the `@storybook/symfony-vite` framework.
 
 ## Testing
 
