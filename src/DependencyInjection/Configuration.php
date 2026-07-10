@@ -24,12 +24,6 @@ final class Configuration implements ConfigurationInterface
                     ->defaultValue('auto')
                 ->end()
                 ->scalarNode('entrypoint')->defaultValue('app')->end()
-                ->arrayNode('component_paths')
-                    ->scalarPrototype()->end()
-                    ->defaultValue(['src/Twig/Components'])
-                ->end()
-                ->scalarNode('template_dir')->defaultValue('templates/components')->end()
-                ->scalarNode('title_prefix')->defaultValue('Components')->end()
             ->end();
 
         return $treeBuilder;
