@@ -1,5 +1,8 @@
 # Storybook Symfony Bundle
 
+[![CI](https://github.com/gabrielhamalwa/storybook-symfony-bundle/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielhamalwa/storybook-symfony-bundle/actions/workflows/ci.yml)
+[![Latest Stable Version](https://poser.pugx.org/storybook/symfony-bundle/v/stable)](https://packagist.org/packages/storybook/symfony-bundle)
+[![PHP Version Require](https://poser.pugx.org/storybook/symfony-bundle/require/php)](https://packagist.org/packages/storybook/symfony-bundle)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig framework. It renders Twig components in isolation, exposes component metadata, and extracts normalized assets for the Storybook renderer.

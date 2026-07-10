@@ -2,7 +2,7 @@
   "name": "storybook/symfony-bundle",
   "description": "Symfony bundle for Storybook's Symfony/Twig framework",
   "type": "symfony-bundle",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "keywords": [
     "storybook",
     "symfony",
