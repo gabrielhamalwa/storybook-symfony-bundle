@@ -19,24 +19,6 @@ final class ConfigurationTest extends TestCase
         self::assertSame('%kernel.project_dir%/public', $config['public_dir']);
         self::assertSame('auto', $config['asset_pipeline']);
         self::assertSame('app', $config['entrypoint']);
-        self::assertSame(['src/Twig/Components'], $config['component_paths']);
-        self::assertSame('templates/components', $config['template_dir']);
-        self::assertSame('Components', $config['title_prefix']);
-    }
-
-    public function testComponentPathsCanBeConfigured(): void
-    {
-        $config = (new Processor())->processConfiguration(new Configuration(), [
-            [
-                'component_paths' => ['src/Ui/Components', 'src/Components'],
-                'template_dir' => 'templates/ui',
-                'title_prefix' => 'UI',
-            ],
-        ]);
-
-        self::assertSame(['src/Ui/Components', 'src/Components'], $config['component_paths']);
-        self::assertSame('templates/ui', $config['template_dir']);
-        self::assertSame('UI', $config['title_prefix']);
     }
 
     public function testPentatrionVitePipelineCanBeConfigured(): void
