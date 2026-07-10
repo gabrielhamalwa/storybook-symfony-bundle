@@ -1,5 +1,7 @@
 # Storybook Symfony Bundle
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig framework. It renders Twig components in isolation, exposes component metadata, and extracts normalized assets for the Storybook renderer.
 
 Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=readme).
@@ -342,3 +344,7 @@ This bundle is used together with the JavaScript packages from the Storybook mon
 - `@storybook/symfony-vite` — framework that starts the PHP server, wires the renderer, and manages the Vite builder.
 
 See the `@storybook/symfony-vite` README for the full quick start guide.
+
+## License
+
+This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
