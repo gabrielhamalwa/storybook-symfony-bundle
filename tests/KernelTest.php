@@ -21,7 +21,20 @@ final class KernelTest extends KernelTestCase
 {
     protected static function createKernel(array $options = []): Kernel
     {
-        return new class('test', true) extends Kernel {
+        return new class('test', true, $options['asset_pipeline'] ?? 'none') extends Kernel {
+            public function __construct(
+                string $environment,
+                bool $debug,
+                private readonly string $assetPipeline,
+            ) {
+                parent::__construct($environment, $debug);
+            }
+
+            public function getCacheDir(): string
+            {
+                return parent::getCacheDir().'/'.$this->assetPipeline;
+            }
+
             public function registerBundles(): iterable
             {
                 return [
@@ -40,7 +53,7 @@ final class KernelTest extends KernelTestCase
                     $container->loadFromExtension('twig', ['default_path' => '%kernel.project_dir%/templates']);
                     $container->loadFromExtension('twig_component', ['defaults' => [], 'anonymous_template_directory' => 'components']);
                     $container->loadFromExtension('storybook', [
-                        'asset_pipeline' => $container->getParameter('storybook.test_asset_pipeline') ?? 'none',
+                        'asset_pipeline' => $this->assetPipeline,
                     ]);
                 });
             }
@@ -66,17 +79,21 @@ final class KernelTest extends KernelTestCase
 
     public function testPentatrionViteAssetPipelineIsWiredWhenConfigured(): void
     {
-        self::bootKernel(['environment' => 'test', 'debug' => true]);
-        self::getContainer()->setParameter('storybook.test_asset_pipeline', 'pentatrion_vite');
-        self::bootKernel();
+        self::bootKernel(['asset_pipeline' => 'pentatrion_vite']);
 
         $container = self::getContainer();
         self::assertInstanceOf(PentatrionViteAssetPipeline::class, $this->getPipeline($container->get(StorybookController::class)));
     }
 
+    protected function tearDown(): void
+    {
+        self::ensureKernelShutdown();
+        parent::tearDown();
+    }
+
     private function getPipeline(StorybookController $controller): AssetPipelineInterface
     {
-        $reflection = new \ReflectionProperty($controller, 'assetPipeline');
+        $reflection = new \ReflectionProperty($controller, 'assetExtractor');
 
         return $reflection->getValue($controller);
     }
