@@ -16,14 +16,15 @@ final class Configuration implements ConfigurationInterface
 
         $rootNode
             ->children()
-                ->scalarNode('environment')->defaultValue('storybook')->end()
-                ->scalarNode('project_dir')->defaultValue('%kernel.project_dir%')->end()
-                ->scalarNode('public_dir')->defaultValue('%kernel.project_dir%/public')->end()
                 ->enumNode('asset_pipeline')
                     ->values(['auto', 'pentatrion_vite', 'encore', 'asset_mapper', 'none'])
                     ->defaultValue('auto')
                 ->end()
                 ->scalarNode('entrypoint')->defaultValue('app')->end()
+                ->arrayNode('cors_allowed_origins')
+                    ->scalarPrototype()->end()
+                    ->defaultValue([])
+                ->end()
             ->end();
 
         return $treeBuilder;
