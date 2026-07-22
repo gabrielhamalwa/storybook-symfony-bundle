@@ -164,7 +164,8 @@ The project uses Mintlify. Pages are `.mdx` files in `docs/` and navigation is c
 
 - Use British English spelling (e.g. `behaviour`, `colour`, `favour`, `centre`).
 - Use Mintlify callout components: `<Note>`, `<Tip>`, `<Warning>`, `<Info>`, `<Danger>`.
-- Group navigation cards with `<CardGroup>` or `<Columns>`.
+- Group navigation cards with `<Columns>`; `<CardGroup>` is deprecated.
+- Use Lucide icon names for `icon` frontmatter, `<Card icon="...">`, and `docs.json` group/anchor icons. Keep `icons.library` set to `lucide` in `docs.json`. Avoid Font Awesome, Tabler, or external icon URLs unless they are unavoidable.
 - Do not invent Mintlify component APIs; verify against the official Mintlify documentation.
 - Reference PHP source code in `src/` and the Storybook monorepo in `/Users/ghamalwa/WebstormProjects/storybook/code/` rather than writing from memory.
 
