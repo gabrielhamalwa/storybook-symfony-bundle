@@ -1,0 +1,117 @@
+---
+title: "Static builds"
+description: "Build and deploy a self-contained static Storybook with PHP WebAssembly for the Symfony/Twig framework."
+icon: "box"
+---
+
+# Static builds
+
+A static build produces a self-contained `storybook-static/` directory. It can be uploaded to any static file host, CDN, or object storage. The browser lazily starts PHP 8.4 WebAssembly in a worker and uses the real Symfony kernel for initial renders, control updates, and Live Component actions.
+
+<Warning>
+The archive contains PHP source and is inspectable by anyone who can download the Storybook. Do not include secrets, `.env` files, or sensitive configuration in the build output.
+</Warning>
+
+<Steps>
+  <Step title="Build application assets in production mode">
+    A manifest that still references a dev-server URL or `localhost` causes the Storybook build to fail or produce broken output. Build your Symfony assets in production mode first.
+
+    <Tabs>
+      <Tab title="Pentatrion Vite">
+        ```bash
+        yarn build
+        ```
+      </Tab>
+      <Tab title="Webpack Encore">
+        ```bash
+        yarn encore production
+        ```
+      </Tab>
+      <Tab title="AssetMapper">
+        ```bash
+        php bin/console asset-map:compile --env=storybook
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Build Storybook">
+    Run the standard Storybook build command from your project root:
+
+    ```bash
+    storybook build
+    ```
+
+    The default output is `storybook-static/`.
+
+    <Tip>
+    Add a `postinstall` script to your `package.json` to pre-warm the Symfony cache after every install:
+
+    ```json
+    {
+      "scripts": {
+        "postinstall": "prewarm-symfony-storybook-cache"
+      }
+    }
+    ```
+
+    The script runs `php bin/console cache:warmup --env=storybook` and, when AssetMapper is available, `php bin/console asset-map:compile --env=storybook`.
+    </Tip>
+  </Step>
+
+  <Step title="Check the package contents">
+    The build packages:
+
+    - Application PHP code, templates, configuration, and translations
+    - Composer dependencies
+    - The front controller
+    - Configured public asset roots (`publicAssetPaths` in `.storybook/main.ts`)
+    - Extra paths listed in `framework.options.symfony.staticInclude`
+
+    It excludes:
+
+    - `.env*` files and Symfony secrets
+    - Repository metadata
+    - Tests, caches, and logs
+    - Unverified external symlinks
+
+    Review `staticInclude` carefully before publishing.
+  </Step>
+
+  <Step title="Host the output">
+    Upload the `storybook-static/` directory to your static host.
+
+    Hosting requirements:
+
+    - Serve `.wasm` files with the `application/wasm` MIME type.
+    - Make the emitted `.zip`, JavaScript, shared-object, and WASM files publicly readable.
+    - Static assets are rebased to the Storybook deployment directory, so the same output works at `/` or a nested path such as `/design-system/`.
+
+    Content Security Policy:
+
+    - The runtime requires `wasm-unsafe-eval` (not `unsafe-eval`).
+    - It needs same-origin worker and connection permissions.
+    - Storybook's generated HTML contains inline bootstrap scripts and styles, so `unsafe-inline` is required unless your hosting pipeline supplies hashes or nonces.
+  </Step>
+
+  <Step title="Verify a deployed story">
+    Open the deployed Storybook and load a story. Confirm:
+
+    - `GET /_storybook/health` returns `{"status":"ok"}`.
+    - `POST /_storybook/render/{id}` returns HTML, assets, and metadata.
+    - Styles and scripts load without 404s.
+  </Step>
+</Steps>
+
+## Common build failures
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| Missing PHP extension | The static PHP runtime does not include the extension. | Remove or replace the Composer dependency that requires it, or gate it behind a non-`storybook` environment. |
+| No styles in static build | The asset manifest still references dev-server URLs. | Build Symfony assets in production mode before `storybook build`. |
+| WASM fails to load | Host does not serve `.wasm` with `application/wasm`. | Update the server MIME type configuration. |
+| CSP errors | `wasm-unsafe-eval` or `unsafe-inline` is missing. | Adjust the Content Security Policy for the Storybook path. |
+
+## Live Components in static builds
+
+Live Component actions, including uploads submitted with Symfony UX's `files(...)` action modifier, work in static builds. Selected files are staged only for the action and are restored as Symfony `UploadedFile` objects inside the PHP-WASM worker.
