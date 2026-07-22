@@ -1,0 +1,84 @@
+---
+title: "Component indexer"
+description: "How the Storybook Symfony Bundle discovers Twig components and extracts their props."
+icon: "search"
+---
+
+# Component indexer
+
+The bundle can discover Symfony UX Twig and Live Components so that Storybook can generate stories automatically. `ComponentIndexer` scans configured PHP directories, inspects component classes, and extracts prop metadata that the Storybook renderer turns into CSF modules.
+
+## What the indexer discovers
+
+The indexer looks for PHP classes decorated with `#[AsTwigComponent]` or `#[AsLiveComponent]` in the configured component directories. By default it scans `src/Twig/Components`. Live components are reported with `type: live_component`; all others are `type: twig_component`.
+
+For each class it builds a metadata object:
+
+```json
+{
+  "id": "Button",
+  "type": "twig_component",
+  "title": "Components/Button",
+  "template": "templates/components/Button.html.twig",
+  "class": "App\\Twig\\Components\\Button",
+  "props": [
+    { "name": "label", "type": "string", "required": true },
+    { "name": "variant", "type": "string", "required": false, "default": "primary" }
+  ]
+}
+```
+
+The `id` comes from the attribute's `key` argument when set, otherwise from the short class name. The default template path is derived from the component id: `templates/components/{id}.html.twig`, with `:` replaced by `/`.
+
+## How props are extracted
+
+Props are built in three layers that merge together:
+
+1. **Constructor parameters**
+2. **Public properties**
+3. **Props tag declarations in the Twig template**
+
+### Constructor parameters
+
+Each constructor parameter becomes a prop with:
+
+- `name` — the parameter name.
+- `type` — the PHP type. Built-in scalar types are preserved; class types are reported as `object`; union and intersection types are reported as `mixed`.
+- `required` — `true` unless the parameter has a default value.
+- `default` — the default value when one is available. Arrays and scalars are serialised as-is; objects become the string `object`.
+
+### Public properties
+
+Each public property also becomes a prop. If a property has the same name as a constructor parameter, the two records are merged:
+
+- The property type is used when the constructor type is `mixed` or missing.
+- The property default value is used when available, marking the prop as not required.
+
+### Twig props tag declarations
+
+`TwigPropsParser` scans the component template for a `{% props %}` block:
+
+```twig
+{% props label = 'Button', variant = 'primary' %}
+```
+
+It supports both block and single-tag syntax:
+
+```twig
+{% props %}
+  label = 'Button'
+  variant = 'primary'
+{% endprops %}
+```
+
+The parser extracts each declaration, infers the type from the default value, and treats declarations without a default value as required. Supported value types are `null`, `true`, `false`, strings, integers, floats, and arrays. If a parsed Twig prop has the same name as a PHP prop, the Twig value wins, so template defaults override PHP defaults in the generated Storybook controls.
+
+<Note>
+The parser is intentionally simple. It does not evaluate Twig expressions, so keep `{% props %}` defaults to literal values when you want accurate controls.
+</Note>
+
+## Configuration
+
+The indexer service is registered by `services.php` with the project directory and the default component path. You do not normally need to configure it directly; the Storybook framework in `/Users/ghamalwa/WebstormProjects/storybook/code/renderers/symfony/src/indexer.ts` calls `GET /_storybook/index` and generates CSF stories from the returned metadata.
+
+If auto-discovery is disabled, the endpoints still exist but return empty arrays or `null` values.
