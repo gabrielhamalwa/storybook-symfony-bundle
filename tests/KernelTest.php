@@ -21,7 +21,7 @@ final class KernelTest extends KernelTestCase
 {
     protected static function createKernel(array $options = []): Kernel
     {
-        return new class('test', true, $options['asset_pipeline'] ?? 'none') extends Kernel {
+        return new class('test', false, $options['asset_pipeline'] ?? 'none') extends Kernel {
             public function __construct(
                 string $environment,
                 bool $debug,
@@ -87,8 +87,20 @@ final class KernelTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        self::ensureKernelShutdown();
         parent::tearDown();
+
+        // Symfony's kernel can leave its exception handler registered, which PHPUnit 11
+        // correctly reports as leaked test state.
+        while (true) {
+            $previousHandler = set_exception_handler(static fn (): null => null);
+            restore_exception_handler();
+
+            if (null === $previousHandler) {
+                break;
+            }
+
+            restore_exception_handler();
+        }
     }
 
     private function getPipeline(StorybookController $controller): AssetPipelineInterface
