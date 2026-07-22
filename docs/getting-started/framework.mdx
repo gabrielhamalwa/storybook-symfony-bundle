@@ -1,0 +1,181 @@
+---
+title: "Storybook framework"
+description: "Configure @storybook/symfony-vite in .storybook/main.ts to start the PHP server and wire the renderer."
+icon: "box"
+---
+
+# Storybook framework
+
+The Node side of the integration is `@storybook/symfony-vite`. It starts the PHP server, wires the Symfony renderer, and configures the Vite builder. Configure it in `.storybook/main.ts` under `framework.options.symfony`.
+
+## Minimal configuration
+
+```ts
+import type { StorybookConfig } from '@storybook/symfony-vite';
+
+const config: StorybookConfig = {
+  stories: ['../templates/components/**/*.stories.ts'],
+  addons: ['@storybook/addon-essentials'],
+  framework: {
+    name: '@storybook/symfony-vite',
+    options: {
+      symfony: {
+        environment: 'storybook',
+      },
+    },
+  },
+};
+
+export default config;
+```
+
+## Framework options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `environment` | `string` | `'storybook'` | Symfony environment used to boot the kernel. |
+| `projectDir` | `string` | `process.cwd()` | Path to the Symfony project root. |
+| `publicDir` | `string` | `<projectDir>/public` | Path to the public directory. |
+| `server` | `'php' \| 'frankenphp' \| 'roadrunner' \| 'symfony-cli' \| 'existing' \| 'auto'` | `'auto'` | PHP server backend. |
+| `serverUrl` | `string` | — | Required when `server` is `'existing'`. |
+| `port` | `number` | random free port | Port for the managed PHP server. |
+| `phpBinary` | `string` | `'php'` | Path to the PHP binary. |
+| `console` | `string` | `<projectDir>/bin/console` | Path to the Symfony console. |
+| `prewarmCache` | `boolean` | `true` | Run `cache:warmup` before starting the PHP server. |
+| `publicAssetPaths` | `string[]` | `['/assets', '/build', '/bundles']` | Public URL prefixes proxied in dev and copied into static builds. |
+| `staticInclude` | `string[]` | — | Extra project-relative paths packaged into static builds. |
+| `staticExclude` | `string[]` | — | Extra project-relative paths excluded from static builds. |
+
+## Server backends
+
+When `server` is `'auto'` or omitted, the framework tries FrankenPHP, then the Symfony CLI, then `php -S`. RoadRunner is never auto-detected; set it explicitly if you want it.
+
+<Tabs>
+  <Tab title="php (fallback)">
+    No extra install is required beyond the PHP binary on your `PATH`.
+
+    ```ts
+    framework: {
+      name: '@storybook/symfony-vite',
+      options: {
+        symfony: {
+          server: 'php',
+        },
+      },
+    },
+    ```
+
+    This starts `php -S 127.0.0.1:<port> -t public <router>` with a temporary router file that forwards requests to `public/index.php`. It is the slowest option but always works.
+  </Tab>
+  <Tab title="FrankenPHP">
+    Install the `frankenphp` binary, for example with Homebrew:
+
+    ```bash
+    brew install frankenphp
+    ```
+
+    Or follow the instructions at [frankenphp.dev](https://frankenphp.dev/).
+
+    ```ts
+    framework: {
+      name: '@storybook/symfony-vite',
+      options: {
+        symfony: {
+          server: 'frankenphp',
+        },
+      },
+    },
+    ```
+
+    This is the fastest auto-detected option. It runs `frankenphp php-server --root public --listen 127.0.0.1:<port>`.
+  </Tab>
+  <Tab title="Symfony CLI">
+    Install the `symfony` binary:
+
+    ```bash
+    curl -sS https://get.symfony.com/cli/installer | bash
+    ```
+
+    ```ts
+    framework: {
+      name: '@storybook/symfony-vite',
+      options: {
+        symfony: {
+          server: 'symfony-cli',
+        },
+      },
+    },
+    ```
+
+    It runs `symfony server:start --port=<port> --no-tls`. Auto-detected when FrankenPHP is not found.
+  </Tab>
+  <Tab title="RoadRunner">
+    Install the `rr` binary and the Symfony runtime package:
+
+    ```bash
+    composer require runtime/roadrunner-symfony-nyholm
+    ```
+
+    Download the `rr` binary from [roadrunner.dev](https://roadrunner.dev/) or install it with your package manager.
+
+    ```ts
+    framework: {
+      name: '@storybook/symfony-vite',
+      options: {
+        symfony: {
+          server: 'roadrunner',
+        },
+      },
+    },
+    ```
+
+    The framework generates a temporary `rr.yaml` and starts `rr serve -c <config>`. This is an advanced option and is not auto-detected.
+  </Tab>
+  <Tab title="Existing server">
+    Point the framework at a server you already run, such as a Docker container or a manually started `php -S`:
+
+    ```ts
+    framework: {
+      name: '@storybook/symfony-vite',
+      options: {
+        symfony: {
+          server: 'existing',
+          serverUrl: 'http://127.0.0.1:8000',
+        },
+      },
+    },
+    ```
+
+    `serverUrl` is required when `server` is `'existing'`. The framework still uses this URL for build-time indexing, so make sure the server is reachable during `storybook build`.
+  </Tab>
+</Tabs>
+
+<Note>
+The `server` setting only affects development and build-time indexing. Production static builds still run Symfony in the browser via PHP WebAssembly.
+</Note>
+
+## Asset paths
+
+If your public assets are served from a prefix other than `/assets`, `/build`, or `/bundles`, add it:
+
+```ts
+symfony: {
+  publicAssetPaths: ['/assets', '/build', '/bundles', '/my-build'],
+},
+```
+
+## Verify the backend
+
+Start Storybook and confirm the backend health endpoint responds:
+
+```bash
+curl http://127.0.0.1:<port>/_storybook/health
+```
+
+Expected output:
+
+```json
+{ "status": "ok" }
+```
+
+If you see an error, check the server backend tab that matches your `server` option and consult [Troubleshooting](/development/troubleshooting).
