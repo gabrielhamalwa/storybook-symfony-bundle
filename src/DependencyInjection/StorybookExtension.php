@@ -28,6 +28,7 @@ final class StorybookExtension extends Extension
 
         $container->setParameter('storybook.asset_pipeline', $config['asset_pipeline']);
         $container->setParameter('storybook.entrypoint', $config['entrypoint']);
+        $container->setParameter('storybook.cors_allowed_origins', $config['cors_allowed_origins']);
 
         $configPath = \dirname(__DIR__).'/Resources/config';
 
