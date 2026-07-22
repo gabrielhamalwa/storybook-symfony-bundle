@@ -1,0 +1,94 @@
+---
+title: "Stimulus"
+description: "Use Symfony UX Stimulus controllers in Storybook stories and test them with play functions."
+icon: "zap"
+---
+
+# Stimulus
+
+Symfony UX Stimulus controllers connect automatically when a rendered Twig template declares `data-controller`. Because the PHP render is asynchronous, the controller may not be connected yet when the story `play` function starts.
+
+## Wire up a controller
+
+This example adds a `button` controller that toggles a `data-clicked` attribute.
+
+### 1. Add the Stimulus controller
+
+```js
+// assets/controllers/button_controller.js
+import { Controller } from '@hotwired/stimulus';
+
+export default class extends Controller {
+  connect() {
+    this.element.setAttribute('data-connected', 'true');
+  }
+
+  click() {
+    this.element.setAttribute('data-clicked', 'true');
+  }
+}
+```
+
+### 2. Update the Twig template
+
+```twig
+{# templates/components/Button.html.twig #}
+<button
+  type="button"
+  data-controller="button"
+  data-action="click->button#click"
+  class="btn btn-{{ variant }}"
+>
+  {{ label }}
+</button>
+```
+
+The `data-controller` attribute name (`button`) must match the controller filename (`button_controller.js`).
+
+### 3. Ensure the entrypoint loads Stimulus
+
+Make sure your entrypoint (for example `assets/app.js`) imports the Stimulus bootstrap:
+
+```js
+import './bootstrap';
+```
+
+And that `assets/bootstrap.js` registers the controllers directory:
+
+```js
+import { startStimulusApp } from '@symfony/stimulus-bridge';
+
+export const app = startStimulusApp(
+  require.context('./controllers', true, /\.js$/)
+);
+```
+
+The configured `entrypoint` in `storybook.yaml` (default `app`) must include this bootstrap so the `assets` response from `POST /_storybook/render/{id}` contains the Stimulus loader.
+
+## Wait for the controller to connect
+
+Use `waitFor` from `storybook/test` before interacting with the element:
+
+```ts
+import { expect, userEvent, waitFor, within } from 'storybook/test';
+
+export const Clickable = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button');
+
+    await waitFor(() => expect(button).toHaveAttribute('data-connected', 'true'));
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('data-clicked', 'true'));
+  },
+};
+```
+
+## Troubleshooting Stimulus in Storybook
+
+If the controller does not connect:
+
+1. Confirm the rendered HTML contains `data-controller` attributes matching the controller filenames in `assets/controllers/`.
+2. Check the `assets` response from `POST /_storybook/render/{id}` includes the entrypoint script that bootstraps Stimulus.
+3. Make sure the asset pipeline is detected in the `storybook` environment (`asset_pipeline: auto` or explicit).
+4. For static builds, include the entrypoint and controller paths in `framework.options.symfony.publicAssetPaths`.
