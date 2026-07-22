@@ -49,7 +49,7 @@ final class KernelTest extends KernelTestCase
             public function registerContainerConfiguration(LoaderInterface $loader): void
             {
                 $loader->load(function ($container) {
-                    $container->loadFromExtension('framework', ['test' => true]);
+                    $container->loadFromExtension('framework', ['test' => true, 'secret' => 'test']);
                     $container->loadFromExtension('twig', ['default_path' => '%kernel.project_dir%/templates']);
                     $container->loadFromExtension('twig_component', ['defaults' => [], 'anonymous_template_directory' => 'components']);
                     $container->loadFromExtension('storybook', [
