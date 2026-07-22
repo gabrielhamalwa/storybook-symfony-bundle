@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/gabrielhamalwa/storybook-symfony-bundle/blob/main/docs/index.mdx
+    about: Read the documentation before opening an issue.
+  - name: Feature idea or enhancement
+    url: https://github.com/gabrielhamalwa/storybook-symfony-bundle/discussions
+    about: Suggest a feature idea or enhancement in GitHub Discussions.
+  - name: Question
+    url: https://github.com/gabrielhamalwa/storybook-symfony-bundle/discussions
+    about: Ask a question or get help in GitHub Discussions.
