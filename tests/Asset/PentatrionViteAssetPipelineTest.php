@@ -70,4 +70,25 @@ final class PentatrionViteAssetPipelineTest extends TestCase
             'importmap' => null,
         ], $pipeline->getAssets());
     }
+
+    public function testDoesNotDuplicateBaseAlreadyIncludedByVitePlugin(): void
+    {
+        $lookup = $this->createMock(EntrypointsLookup::class);
+        $lookup->method('hasFile')->willReturn(true);
+        $lookup->method('getBase')->willReturn('/build/');
+        $lookup->method('getCSSFiles')->with('app')->willReturn(['/build/assets/app.css']);
+        $lookup->method('getJSFiles')->with('app')->willReturn(['/build/assets/app.js']);
+
+        $collection = $this->createMock(EntrypointsLookupCollection::class);
+        $collection->method('getEntrypointsLookup')->willReturn($lookup);
+
+        $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
+
+        self::assertSame([
+            'pipeline' => 'pentatrion-vite',
+            'styles' => [['url' => '/build/assets/app.css']],
+            'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
+            'importmap' => null,
+        ], $pipeline->getAssets());
+    }
 }
