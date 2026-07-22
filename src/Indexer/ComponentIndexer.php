@@ -259,7 +259,7 @@ final class ComponentIndexer implements ComponentIndexerInterface
      */
     private function mergePropWithProperty(array $prop, \ReflectionProperty $property): array
     {
-        if ('mixed' === $prop['type'] || null === $prop['type']) {
+        if ('mixed' === $prop['type']) {
             $prop['type'] = $this->formatType($property->getType());
         }
 
@@ -326,7 +326,7 @@ final class ComponentIndexer implements ComponentIndexerInterface
         return null;
     }
 
-    private function formatType(?\ReflectionType $type): ?string
+    private function formatType(?\ReflectionType $type): string
     {
         if (null === $type) {
             return 'mixed';
