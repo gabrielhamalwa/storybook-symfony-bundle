@@ -29,7 +29,8 @@
     "symfony/webpack-encore-bundle": "^2.0",
     "symfony/yaml": "^6.4 || ^7.0 || ^8.0",
     "pestphp/pest": "^3.0",
-    "symfony/ux-live-component": "^2.0 || ^3.0"
+    "symfony/ux-live-component": "^2.0 || ^3.0",
+    "phpstan/phpstan": "^2.2"
   },
   "autoload": {
     "psr-4": {
@@ -43,7 +44,8 @@
     }
   },
   "scripts": {
-    "test": "vendor/bin/pest"
+    "test": "vendor/bin/pest",
+    "phpstan": "vendor/bin/phpstan analyse --no-progress"
   },
   "config": {
     "allow-plugins": {
