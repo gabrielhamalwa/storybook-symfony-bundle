@@ -1,0 +1,228 @@
+---
+title: "Writing stories"
+description: "Write Storybook stories for Twig components, plain Twig templates, controller fragments, and Live Components."
+icon: "pen"
+---
+
+# Writing stories
+
+Stories in `@storybook/symfony-vite` are written in Component Story Format (CSF). The `component` field of the `meta` object tells the bundle which adapter to use and which identifier to render.
+
+Every story file imports `Meta` and `StoryObj` from `@storybook/symfony-vite`:
+
+```ts
+import type { Meta, StoryObj } from '@storybook/symfony-vite';
+```
+
+<Tabs>
+  <Tab title="Twig component">
+    The `component` value is the Twig component name from `#[AsTwigComponent('Button')]`. Story args become component props.
+
+    ```ts
+    // stories/Button.stories.ts
+    import type { Meta, StoryObj } from '@storybook/symfony-vite';
+
+    type ButtonArgs = {
+      label: string;
+      variant?: 'primary' | 'secondary';
+    };
+
+    const meta = {
+      title: 'Components/Button',
+      component: 'Button',
+    } satisfies Meta<ButtonArgs>;
+
+    export default meta;
+
+    type Story = StoryObj<ButtonArgs>;
+
+    export const Primary: Story = {
+      args: {
+        label: 'Primary Button',
+        variant: 'primary',
+      },
+    };
+
+    export const Secondary: Story = {
+      args: {
+        label: 'Secondary Button',
+        variant: 'secondary',
+      },
+    };
+    ```
+
+    Controls appear automatically when the bundle indexes the component. You can override them with `argTypes`:
+
+    ```ts
+    const meta = {
+      title: 'Components/Button',
+      component: 'Button',
+      argTypes: {
+        variant: {
+          control: 'select',
+          options: ['primary', 'secondary'],
+        },
+      },
+    } satisfies Meta<ButtonArgs>;
+    ```
+  </Tab>
+
+  <Tab title="Plain Twig template">
+    Set `component` to a template path, or set `parameters.symfony.adapter` to `'template'` with an explicit `template` path. The story args become Twig variables.
+
+    ```ts
+    // stories/Alert.stories.ts
+    import type { Meta, StoryObj } from '@storybook/symfony-vite';
+
+    type AlertArgs = {
+      message: string;
+    };
+
+    const meta = {
+      title: 'Templates/Alert',
+      component: 'components/Alert.html.twig',
+    } satisfies Meta<AlertArgs>;
+
+    export default meta;
+
+    type Story = StoryObj<AlertArgs>;
+
+    export const Info: Story = {
+      args: {
+        message: 'Saved successfully',
+      },
+    };
+    ```
+
+    Explicit adapter and template path:
+
+    ```ts
+    export const Alert = {
+      parameters: {
+        symfony: {
+          adapter: 'template',
+          template: 'components/Alert.html.twig',
+        },
+      },
+    };
+    ```
+  </Tab>
+
+  <Tab title="Controller fragment">
+    Set `component` to a controller reference, or set `parameters.symfony.adapter` to `'controller'` with a `controller` field. The story args are passed to the controller action.
+
+    ```ts
+    // stories/AlertFragment.stories.ts
+    import type { Meta, StoryObj } from '@storybook/symfony-vite';
+
+    type AlertFragmentArgs = {
+      message: string;
+    };
+
+    const meta = {
+      title: 'Fragments/Alert',
+      component: 'App\\Controller\\AlertController::fragment',
+    } satisfies Meta<AlertFragmentArgs>;
+
+    export default meta;
+
+    type Story = StoryObj<AlertFragmentArgs>;
+
+    export const Info: Story = {
+      args: {
+        message: 'Saved successfully',
+      },
+    };
+    ```
+
+    Explicit adapter and controller reference:
+
+    ```ts
+    export const Alert = {
+      parameters: {
+        symfony: {
+          adapter: 'controller',
+          controller: 'App\\Controller\\AlertController::fragment',
+        },
+      },
+    };
+    ```
+  </Tab>
+
+  <Tab title="Live Component">
+    Requires `symfony/ux-live-component`. Set `parameters.symfony.live` to `true` on the meta or the story.
+
+    ```ts
+    // stories/Notification.stories.ts
+    import type { Meta, StoryObj } from '@storybook/symfony-vite';
+
+    type NotificationArgs = {
+      message: string;
+    };
+
+    const meta = {
+      title: 'Live/Notification',
+      component: 'Notification',
+      parameters: {
+        symfony: {
+          live: true,
+        },
+      },
+    } satisfies Meta<NotificationArgs>;
+
+    export default meta;
+
+    type Story = StoryObj<NotificationArgs>;
+
+    export const Info: Story = {
+      args: {
+        message: 'Saved successfully',
+      },
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Common story options
+
+### Override the server URL for one story
+
+```ts
+export const ExistingServer = {
+  parameters: {
+    symfony: {
+      serverUrl: 'http://127.0.0.1:8000',
+    },
+  },
+};
+```
+
+### Force a specific adapter
+
+```ts
+export const ExplicitTemplate = {
+  parameters: {
+    symfony: {
+      adapter: 'template',
+      template: 'components/Alert.html.twig',
+    },
+  },
+};
+```
+
+### Play functions
+
+Use `play` to interact with the rendered component after it mounts. See [Stimulus](/usage/stimulus) for waiting on controller connection.
+
+```ts
+import { expect, userEvent, waitFor, within } from 'storybook/test';
+
+export const Clickable = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole('button');
+    await userEvent.click(button);
+    await waitFor(() => expect(button).toHaveAttribute('data-clicked', 'true'));
+  },
+};
+```
