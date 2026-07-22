@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  phpunit:
-    name: PHPUnit (Symfony ${{ matrix.symfony }}, PHP ${{ matrix.php }})
+  pest:
+    name: Pest (Symfony ${{ matrix.symfony }}, PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -66,5 +66,5 @@ jobs:
             }
           '
 
-      - name: Run PHPUnit
+      - name: Run Pest
         run: composer test
