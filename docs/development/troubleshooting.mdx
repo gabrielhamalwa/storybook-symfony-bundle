@@ -1,0 +1,65 @@
+---
+title: "Troubleshooting"
+description: "Common problems when setting up and running Storybook with the Symfony/Twig framework."
+icon: "wrench"
+---
+
+# Troubleshooting
+
+## The PHP server fails to start
+
+Check that:
+
+- `php` is available in your shell `PATH`.
+- `public/index.php` exists in your Symfony project.
+- `bin/console` is executable.
+- The `storybook` environment has a minimal `framework.yaml` that enables routing.
+
+## Storybook shows "No Symfony server URL is configured"
+
+The renderer could not find a server URL. Make sure one of the following is true:
+
+- The framework started the PHP server successfully (`GET /_storybook/health` returned `{"status":"ok"}`).
+- You set `framework.options.symfony.serverUrl` when using `server: 'existing'`.
+- You set `parameters.symfony.serverUrl` in `.storybook/preview.ts` or in the story.
+
+## Components render without styles or Stimulus controllers do not connect
+
+1. Verify the bundle detected the correct asset pipeline in the `storybook` environment. Inspect the response from `POST /_storybook/render/{id}` and confirm the `assets` object contains the expected styles and scripts.
+2. Make sure the asset entrypoint (`app` by default) includes the CSS and Stimulus bootstrap for your components.
+3. For Stimulus, confirm that the rendered HTML contains `data-controller` attributes matching the controller names in `assets/controllers/`.
+
+## The backend health check times out
+
+The framework waits up to 30 seconds for `GET /_storybook/health` to respond. If it times out:
+
+1. Start the PHP server manually:
+   ```bash
+   php -S 127.0.0.1:8000 -t public public/index.php
+   ```
+2. Set `server: 'existing'` and `serverUrl: 'http://127.0.0.1:8000'` in `.storybook/main.ts`.
+3. Run `APP_ENV=storybook bin/console debug:router` to confirm the `/_storybook/*` routes are registered.
+4. Check Symfony logs for container compilation errors in the `storybook` environment.
+
+## Auto-detection picked the wrong server backend
+
+Set `server` explicitly in `.storybook/main.ts`:
+
+```ts
+framework: {
+  name: '@storybook/symfony-vite',
+  options: {
+    symfony: {
+      server: 'frankenphp',
+    },
+  },
+},
+```
+
+## Static build fails with missing PHP extension
+
+The browser-side PHP WebAssembly runtime cannot load PHP extensions that are not compiled into the static image. If the build fails with the name of a missing extension, remove or replace the Composer dependency that requires it, or gate it behind a non-`storybook` environment.
+
+## Static build has no styles
+
+Build your application assets in production mode before running `storybook build`. A manifest that still references `localhost` or a dev-server URL causes the Storybook build to produce a broken static output.
