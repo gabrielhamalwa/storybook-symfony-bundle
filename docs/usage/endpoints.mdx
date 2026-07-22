@@ -1,0 +1,124 @@
+---
+title: "Endpoints"
+description: "HTTP endpoints exposed by the Storybook Symfony Bundle under the /_storybook prefix."
+icon: "code"
+---
+
+# Endpoints
+
+All endpoints are mounted under the `/_storybook` prefix.
+
+## `GET /_storybook/health`
+
+Returns a simple status object used by the Storybook framework to wait for the PHP backend:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## `POST /_storybook/render/{id}`
+
+Renders the component identified by the request body and returns the resulting HTML plus assets.
+
+### Request body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `componentId` | `string` | Yes for Twig and Live components; optional for template/controller | Component name, template path, or controller reference. |
+| `adapter` | `string` | No | Force a specific adapter: `twig_component`, `template`, `controller`, or `live`. |
+| `template` | `string` | Only when `adapter` is `template` | Twig template path. If it starts with `templates/`, the prefix is stripped. |
+| `controller` | `string` | Only when `adapter` is `controller` | Controller reference such as `App\Controller\AlertController::fragment`. |
+| `args` | `object` | No | Props passed to the component or template. |
+| `globals` | `object` | No | Storybook globals included for custom adapters and future integrations. Built-in adapters don't expose them to Twig. |
+
+### Response body
+
+```json
+{
+  "html": "<button ...>Save</button>",
+  "assets": {
+    "pipeline": "pentatrion-vite",
+    "styles": [{ "url": "/build/app.css" }],
+    "scripts": [{ "url": "/build/app.js", "type": "module", "async": false, "defer": true }],
+    "importmap": null
+  },
+  "metadata": {
+    "component": "components-button--primary"
+  }
+}
+```
+
+The `assets` object has the following shape:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `pipeline` | `string` | Identifier of the pipeline that produced the assets, e.g. `pentatrion-vite`, `encore`, `asset_mapper`, or `none`. |
+| `styles` | `{ url: string }[]` | External stylesheets to inject into the canvas. |
+| `scripts` | `{ url: string, type: string, async: boolean, defer: boolean }[]` | External scripts to inject into the canvas. `type` is `module` for module scripts; `async` and `defer` mirror the script attributes returned by the pipeline. The renderer injects module scripts with `type="module"` and ignores `async` and `defer` for those scripts because module scripts defer by default. |
+| `importmap` | `object \| null` | Import map object when AssetMapper is used, otherwise `null`. |
+
+The `metadata` object is reserved for framework use. It currently contains the Storybook story `id` passed as the `{id}` path parameter.
+
+### Error handling
+
+The controller catches adapter and rendering errors and returns them as JSON:
+
+| Status | Cause | Response body |
+| --- | --- | --- |
+| `200` | Successful render | `{ html, assets, metadata }` |
+| `400` | Invalid request, missing component identifier, or adapter error | `{ error: string }` |
+| `500` | Unexpected exception during render | `{ error: string, message: string }` |
+
+The renderer in `/Users/ghamalwa/WebstormProjects/storybook/code/renderers/symfony/src/render.ts` reads `error` and `message` from error responses and surfaces them in the Storybook canvas.
+
+### Static form data
+
+In a static build the PHP runtime runs inside the browser as PHP WebAssembly. `multipart/form-data` requests cannot be sent directly to the WASM worker, so the Storybook renderer encodes form fields and uploaded files into base64 headers before the request reaches the Symfony kernel.
+
+`StaticFormDataListener` decodes those headers and restores the Symfony request:
+
+- `X-Storybook-Symfony-Form-Data` — base64-encoded query-string form parameters.
+- `X-Storybook-Symfony-Uploaded-Files` — base64-encoded JSON descriptors for uploaded files.
+
+Each file descriptor must contain `field`, `name`, `path`, `type`, and `path` must match the `/tmp/storybook-uploads/{id}/{index}` pattern. The listener validates the descriptor shape and path before creating Symfony `UploadedFile` instances. Invalid data throws a `BadRequestHttpException` with HTTP `400`.
+
+<Note>
+This transport is only used by the static PHP-WASM runtime. The local development server receives normal form posts through the Vite proxy.
+</Note>
+
+## `GET /_storybook/index`
+
+Lists discoverable Symfony UX TwigComponents. The Storybook indexer uses it when auto-discovery is enabled.
+
+Each component in the array has this shape:
+
+```json
+{
+  "id": "Button",
+  "type": "twig_component",
+  "title": "Components/Button",
+  "template": "templates/components/Button.html.twig",
+  "class": "App\\Twig\\Components\\Button",
+  "props": [
+    { "name": "label", "type": "string", "required": true },
+    { "name": "variant", "type": "string", "required": false, "default": "primary" }
+  ]
+}
+```
+
+See [Component indexer](/usage/indexer) for how props are extracted.
+
+## `GET /_storybook/source/{id}`
+
+Returns the Twig template and PHP class source for a component. This endpoint supports development tooling; Storybook's docs panel generates a copy-pastable Twig invocation from the story instead.
+
+```json
+{
+  "template": "<button>{{ label }}</button>",
+  "class": "final class Button { /* ... */ }"
+}
+```
+
+If the component is not found, both values are `null`.
