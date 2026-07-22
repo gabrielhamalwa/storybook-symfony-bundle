@@ -5,7 +5,7 @@
 [![PHP Version Require](https://poser.pugx.org/storybook/symfony-bundle/require/php)](https://packagist.org/packages/storybook/symfony-bundle)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Symfony bundle that provides the backend runtime for Storybook's Symfony/Twig framework. It renders Twig components in isolation, exposes component metadata, and extracts normalized assets for the Storybook renderer.
+Symfony bundle that provides the application runtime for Storybook's Symfony/Twig framework. It renders Twig components in isolation, exposes component metadata, and extracts normalized assets for the Storybook renderer. The same bundle runs through a local PHP server during development and through PHP WebAssembly in a self-contained static build.
 
 Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=readme).
 
@@ -13,13 +13,13 @@ Learn more about Storybook at [storybook.js.org](https://storybook.js.org/?ref=r
 
 Full documentation is in the [`docs`](./docs) directory:
 
-- [Overview](./docs/index.md)
-- [Installation](./docs/installation.md)
-- [Configuration](./docs/configuration.md)
-- [Component adapters](./docs/adapters.md)
-- [Asset pipelines](./docs/asset-pipelines.md)
-- [Endpoints](./docs/endpoints.md)
-- [Development](./docs/development.md)
+- [Overview](./docs/index.mdx)
+- [Installation](./docs/getting-started/installation.mdx)
+- [Configuration](./docs/getting-started/configuration.mdx)
+- [Component adapters](./docs/usage/adapters.mdx)
+- [Asset pipelines](./docs/usage/asset-pipelines.mdx)
+- [Endpoints](./docs/usage/endpoints.mdx)
+- [Development](./docs/development/setup.mdx)
 
 ## What it does
 
@@ -28,14 +28,14 @@ This bundle is the PHP side of the Storybook Symfony/Twig integration. When you 
 - Render a Twig component, plain Twig template, controller fragment, or Symfony UX Live Component with a given set of args (`POST /_storybook/render/{id}`).
 - Return the styles and scripts that belong to the component's asset entrypoint.
 - Report health so the Storybook dev server knows the PHP backend is ready (`GET /_storybook/health`).
-- List discoverable components and expose source code for the docs panel (`GET /_storybook/index`, `GET /_storybook/source/{id}`).
+- List discoverable components and expose source code to development tools (`GET /_storybook/index`, `GET /_storybook/source/{id}`).
 
 The bundle is intentionally small. It relies on Symfony UX TwigComponent by default and can also render plain Twig templates, controller fragments, and Symfony UX Live Components.
 
 ## Requirements
 
 - PHP 8.2 or higher
-- Symfony 6.4 or 7.0
+- Symfony 6.4, 7.x, or 8.x
 - Twig 3.8 or higher
 - Symfony UX TwigComponent 2.0 or 3.0
 
@@ -119,20 +119,16 @@ The bundle is configured under the `storybook` key in `config/packages/storybook
 
 ```yaml
 storybook:
-  environment: storybook
-  project_dir: '%kernel.project_dir%'
-  public_dir: '%kernel.project_dir%/public'
   asset_pipeline: auto
   entrypoint: app
+  cors_allowed_origins: []
 ```
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `environment` | `string` | `storybook` | Symfony environment used when the Storybook framework boots the PHP server. |
-| `project_dir` | `string` | `%kernel.project_dir%` | Path to the Symfony project root. |
-| `public_dir` | `string` | `%kernel.project_dir%/public` | Path to the public directory. |
 | `asset_pipeline` | `auto`, `pentatrion_vite`, `encore`, `asset_mapper`, `none` | `auto` | Asset pipeline to use for extracting styles and scripts. |
 | `entrypoint` | `string` | `app` | Entrypoint name used to look up the component's assets. |
+| `cors_allowed_origins` | `string[]` | `[]` | Origins allowed to call an explicitly configured browser-reachable backend. Standard static builds do not need CORS. |
 
 When `asset_pipeline` is `auto`, the bundle detects the installed pipeline by checking for known Symfony services in this order:
 
@@ -223,7 +219,7 @@ Request body fields:
 | `template` | `string` | Only when `adapter` is `template` | Twig template path. If it starts with `templates/`, the prefix is stripped. |
 | `controller` | `string` | Only when `adapter` is `controller` | Controller reference such as `App\Controller\AlertController::fragment`. |
 | `args` | `object` | No | Props passed to the component or template. |
-| `globals` | `object` | No | Additional global variables passed to the render context. |
+| `globals` | `object` | No | Storybook globals reserved for custom adapters and future integrations. |
 
 Twig component example:
 
@@ -302,32 +298,35 @@ The `id` path parameter is the Storybook story ID; the actual component identifi
 
 ### `GET /_storybook/index`
 
-Reserved for the experimental auto-discovery indexer. Currently returns an empty list:
+Lists Twig components for the experimental auto-discovery indexer:
 
 ```json
 {
-  "components": []
+  "components": [
+    {
+      "id": "Button",
+      "type": "twig_component",
+      "title": "Components/Button",
+      "props": []
+    }
+  ]
 }
 ```
 
 ### `GET /_storybook/source/{id}`
 
-Reserved for the docs panel source extractor. Currently returns an empty response:
+Returns the Twig template and PHP class source for development tooling. The Storybook docs panel generates a copy-pastable Twig invocation from each story instead.
 
 ```json
 {
-  "template": null,
-  "class": null
+  "template": "<button>{{ label }}</button>",
+  "class": "final class Button { /* ... */ }"
 }
 ```
 
 ## Migration
 
 If you are migrating from an iframe-based Symfony/Storybook integration such as `sensiolabs/StorybookBundle`, read the Storybook framework's [migration guide](https://github.com/storybookjs/storybook/blob/next/docs/get-started/frameworks/symfony-vite-migration.mdx). It covers removing iframe patches, migrating `.stories.json` files to `.stories.ts`, and configuring the minimal `storybook` environment shown above.
-
-## RFC and release plan
-
-The architecture, component adapters, asset pipelines, server backends, and proposed alpha/beta/RC timeline are documented in the [RFC](https://github.com/storybookjs/storybook/blob/next/.devin/plans/RFC.md). The Composer bundle is part of that proposal and will be released in lockstep with the `@storybook/symfony-vite` framework.
 
 ## Testing
 
