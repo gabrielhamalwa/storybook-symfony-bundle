@@ -1,0 +1,103 @@
+{
+  "theme": "mint",
+  "name": "Storybook Symfony Bundle",
+  "description": "PHP backend runtime for Storybook's Symfony/Twig framework.",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "colors": {
+    "primary": "#006AD4",
+    "light": "#007FFF",
+    "dark": "#006AD4"
+  },
+  "favicon": "favicon.svg",
+  "icons": {
+    "library": "lucide"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://github.com/gabrielhamalwa/storybook-symfony-bundle/issues"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "GitHub",
+      "href": "https://github.com/gabrielhamalwa/storybook-symfony-bundle"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/gabrielhamalwa/storybook-symfony-bundle"
+    }
+  },
+  "contextual": {
+    "options": [
+      "assistant",
+      "copy",
+      "chatgpt",
+      "claude",
+      "cursor",
+      "vscode",
+      "perplexity",
+      "grok"
+    ],
+    "display": "toc"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get started",
+            "icon": "terminal",
+            "pages": [
+              "index",
+              "getting-started/installation",
+              "getting-started/configuration",
+              "getting-started/framework"
+            ]
+          },
+          {
+            "group": "Usage",
+            "icon": "blocks",
+            "pages": [
+              "usage/adapters",
+              "usage/asset-pipelines",
+              "usage/endpoints",
+              "usage/indexer",
+              "usage/writing-stories",
+              "usage/static-builds",
+              "usage/stimulus"
+            ]
+          },
+          {
+            "group": "Development",
+            "icon": "git-branch",
+            "pages": [
+              "development/setup",
+              "development/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/gabrielhamalwa/storybook-symfony-bundle",
+          "icon": "https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/github.svg"
+        },
+        {
+          "anchor": "Storybook",
+          "href": "https://storybook.js.org",
+          "icon": "book"
+        }
+      ]
+    }
+  }
+}
