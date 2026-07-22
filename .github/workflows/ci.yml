@@ -66,6 +66,7 @@ jobs:
           if [ '${{ matrix.dependencies }}' = 'lowest' ]; then
             composer update --prefer-lowest --prefer-stable --with-all-dependencies --prefer-dist --no-interaction --no-progress
           elif [ '${{ matrix.dependencies }}' = 'latest' ]; then
+            composer config platform.php '${{ matrix.php }}.0'
             composer update --with-all-dependencies --prefer-dist --no-interaction --no-progress
           else
             composer install --prefer-dist --no-interaction --no-progress
