@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Storybook\SymfonyBundle\Component;
 
 use Storybook\SymfonyBundle\Dto\RenderRequest;
-use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use Twig\Environment;
 
 final readonly class LiveComponentAdapter implements ComponentAdapterInterface
 {
-    public function __construct(private ComponentRendererInterface $componentRenderer)
+    public function __construct(private Environment $twig)
     {
     }
 
@@ -25,6 +25,11 @@ final readonly class LiveComponentAdapter implements ComponentAdapterInterface
             throw new \InvalidArgumentException('Missing component ID for live component adapter.');
         }
 
-        return $this->componentRenderer->createAndRender($componentId, $request->args);
+        return $this->twig
+            ->createTemplate('{{ component(componentId, args) }}', '__storybook_live_component__')
+            ->render([
+                'componentId' => $componentId,
+                'args' => $request->args,
+            ]);
     }
 }
