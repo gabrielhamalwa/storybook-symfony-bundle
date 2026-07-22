@@ -34,6 +34,7 @@ storybook-symfony-bundle/
 │   └── StorybookBundle.php   # Bundle class
 ├── tests/                    # Pest/PHPUnit test classes
 ├── composer.json             # Composer manifest
+├── phpstan.neon.dist         # PHPStan configuration
 └── phpunit.xml.dist          # PHPUnit configuration
 ```
 
@@ -111,6 +112,7 @@ vendor/bin/pest --filter testName
 | Run the full test suite                    | `composer test`                              |
 | Run tests for one class                    | `vendor/bin/pest <path-to-test>.php`         |
 | Update lock file to latest compatible deps | `composer update`                            |
+| Run static analysis                        | `composer phpstan`                           |
 
 ## How To Work In This Repo
 
@@ -148,7 +150,8 @@ After changing files:
 
 1. Run `composer validate --strict` to check the Composer manifest.
 2. Run `composer test` to run the Pest suite.
-3. Run `vendor/bin/pest <affected-test-file>` for targeted verification.
+3. Run `composer phpstan` to run static analysis.
+4. Run `vendor/bin/pest <affected-test-file>` for targeted verification.
 
 There is no automated PHP formatter configured in this repo. Follow the existing code style:
 
