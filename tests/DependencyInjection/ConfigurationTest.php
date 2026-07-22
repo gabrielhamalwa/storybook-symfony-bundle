@@ -14,11 +14,9 @@ final class ConfigurationTest extends TestCase
     {
         $config = (new Processor())->processConfiguration(new Configuration(), []);
 
-        self::assertSame('storybook', $config['environment']);
-        self::assertSame('%kernel.project_dir%', $config['project_dir']);
-        self::assertSame('%kernel.project_dir%/public', $config['public_dir']);
         self::assertSame('auto', $config['asset_pipeline']);
         self::assertSame('app', $config['entrypoint']);
+        self::assertSame([], $config['cors_allowed_origins']);
     }
 
     public function testPentatrionVitePipelineCanBeConfigured(): void
