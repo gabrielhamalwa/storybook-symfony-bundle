@@ -9,11 +9,11 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 final class ComponentIndexer implements ComponentIndexerInterface
 {
-    private const string DEFAULT_TEMPLATE_DIR = 'templates/components';
+    private const DEFAULT_TEMPLATE_DIR = 'templates/components';
 
-    private const string DEFAULT_COMPONENT_DIR = 'src/Twig/Components';
+    private const DEFAULT_COMPONENT_DIR = 'src/Twig/Components';
 
-    private const string DEFAULT_TITLE_PREFIX = 'Components';
+    private const DEFAULT_TITLE_PREFIX = 'Components';
 
     private readonly string $liveComponentAttribute;
 
