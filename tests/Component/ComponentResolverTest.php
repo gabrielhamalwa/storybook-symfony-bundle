@@ -70,7 +70,7 @@ final class ComponentResolverTest extends TestCase
     public function testResolvesLiveAdapterForExplicitAdapter(): void
     {
         $resolver = $this->createResolver(
-            new LiveComponentAdapter($this->createMock(ComponentRendererInterface::class))
+            new LiveComponentAdapter($this->createMock(Environment::class))
         );
         $adapter = $resolver->resolve(new RenderRequest(id: 'live--primary', adapter: 'live'));
 
