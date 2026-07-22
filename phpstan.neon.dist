@@ -1,0 +1,9 @@
+parameters:
+    level: 5
+    paths:
+        - src
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        -
+            identifier: constructor.unusedParameter
+            path: src/Asset/NullAssetPipeline.php
