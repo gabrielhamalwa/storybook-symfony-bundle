@@ -144,7 +144,7 @@ Once the changes are complete and approved, a maintainer will merge them.
 A public GitHub account is required.
 
 - Development: bug fixes, adapters, asset pipelines, and other code changes. Refer to [`docs/development/setup.mdx`](./docs/development/setup.mdx) for setup and conventions.
-- Documentation: improvements to `README.md` and files under `docs/`.
+- Documentation: improvements to `README.md` and files under `docs/`. Use British English spelling and Lucide icon names throughout.
 - Testing: additions or improvements to test coverage.
 
 ### Other ways to contribute
