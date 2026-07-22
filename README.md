@@ -330,10 +330,10 @@ If you are migrating from an iframe-based Symfony/Storybook integration such as 
 
 ## Testing
 
-The bundle uses PHPUnit. Run the test suite from the bundle root:
+The bundle uses [Pest](https://pestphp.com/). Run the test suite from the bundle root:
 
 ```bash
-./vendor/bin/phpunit
+./vendor/bin/pest
 ```
 
 Tests cover the asset pipelines, the compiler pass, the controller, and the CORS listener.
