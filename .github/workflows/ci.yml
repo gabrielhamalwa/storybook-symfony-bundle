@@ -40,8 +40,26 @@ jobs:
           php-version: ${{ matrix.php }}
           tools: composer
 
+      - name: Remove Composer GitHub OAuth token
+        run: composer config --global --unset github-oauth.github.com || true
+
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Restore Composer cache
+        id: composer-cache-restore
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php${{ matrix.php }}-${{ matrix.dependencies }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php${{ matrix.php }}-${{ matrix.dependencies }}-
+            ${{ runner.os }}-php${{ matrix.php }}-
+            ${{ runner.os }}-composer-
 
       - name: Install dependencies
         run: |
@@ -52,6 +70,13 @@ jobs:
           else
             composer install --prefer-dist --no-interaction --no-progress
           fi
+
+      - name: Save Composer cache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ steps.composer-cache-restore.outputs.cache-primary-key }}
 
       - name: Verify Symfony version
         env:
