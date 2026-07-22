@@ -1,6 +1,8 @@
 # Storybook Symfony Bundle
 
 [![CI](https://github.com/gabrielhamalwa/storybook-symfony-bundle/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielhamalwa/storybook-symfony-bundle/actions/workflows/ci.yml)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%205-777?logo=php)](https://github.com/gabrielhamalwa/storybook-symfony-bundle/actions/workflows/ci.yml)
+[![Codecov](https://img.shields.io/codecov/c/github/gabrielhamalwa/storybook-symfony-bundle)](https://codecov.io/gh/gabrielhamalwa/storybook-symfony-bundle)
 [![Latest Stable Version](https://poser.pugx.org/storybook/symfony-bundle/v/stable)](https://packagist.org/packages/storybook/symfony-bundle)
 [![PHP Version Require](https://poser.pugx.org/storybook/symfony-bundle/require/php)](https://packagist.org/packages/storybook/symfony-bundle)
 [![Symfony](https://img.shields.io/badge/Symfony-6.4%20%7C%207.x%20%7C%208.x-111?logo=symfony)](https://symfony.com)
