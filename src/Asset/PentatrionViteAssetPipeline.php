@@ -64,6 +64,11 @@ final readonly class PentatrionViteAssetPipeline implements AssetPipelineInterfa
             return $file;
         }
 
-        return $base.$file;
+        $normalizedBase = rtrim($base, '/');
+        if ('' === $normalizedBase || str_starts_with($file, $normalizedBase.'/')) {
+            return $file;
+        }
+
+        return $normalizedBase.'/'.ltrim($file, '/');
     }
 }
