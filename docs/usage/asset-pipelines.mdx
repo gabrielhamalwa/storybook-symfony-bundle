@@ -1,0 +1,150 @@
+---
+title: "Asset pipelines"
+description: "Configure Pentatrion Vite, Webpack Encore, AssetMapper, or no pipeline for the Storybook Symfony Bundle."
+icon: "route"
+---
+
+# Asset pipelines
+
+The bundle extracts the styles and scripts for the configured `entrypoint` from the rendered component. It supports the most common Symfony asset pipelines.
+
+Set the pipeline and entrypoint in `config/packages/storybook/storybook.yaml`:
+
+```yaml
+storybook:
+  asset_pipeline: auto
+  entrypoint: app
+```
+
+`asset_pipeline` accepts `auto`, `pentatrion_vite`, `encore`, `asset_mapper`, or `none`. The default `auto` setting detects the installed pipeline in this order: Pentatrion Vite, Webpack Encore, AssetMapper, then none.
+
+<Tabs>
+  <Tab title="Pentatrion Vite">
+    Install the bundle if you have not already:
+
+    ```bash
+    composer require pentatrion/vite-bundle
+    ```
+
+    Make sure your `vite.config.js` builds an `app` entrypoint that includes your Stimulus bootstrap and component styles. The bundle reads `entrypoints.json` to find the CSS and module scripts for that entrypoint.
+
+    In development, the Vite dev server must be running so `entrypoints.json` and dev-server URLs are available. A convenient `package.json` script is:
+
+    ```json
+    {
+      "scripts": {
+        "dev": "concurrently \"yarn vite\" \"yarn storybook\"",
+        "storybook": "storybook dev -p 6006"
+      }
+    }
+    ```
+
+    Then run:
+
+    ```bash
+    yarn dev
+    ```
+
+    Bundle configuration:
+
+    ```yaml
+    # config/packages/storybook/storybook.yaml
+    storybook:
+      asset_pipeline: auto
+      entrypoint: app
+    ```
+  </Tab>
+
+  <Tab title="Webpack Encore">
+    Install Encore if you have not already:
+
+    ```bash
+    composer require symfony/webpack-encore-bundle
+    yarn install
+    ```
+
+    Configure `webpack.config.cjs` to build an `app` entrypoint that includes your Stimulus bootstrap and component styles:
+
+    ```javascript
+    // webpack.config.cjs
+    const Encore = require('@symfony/webpack-encore');
+
+    Encore
+      .setOutputPath('public/build/')
+      .setPublicPath('/build')
+      .addEntry('app', './assets/app.js')
+      .enableStimulusBridge('./assets/controllers.json')
+      .enableSassLoader()
+      .enableSourceMaps(!Encore.isProduction())
+      .enableVersioning(Encore.isProduction())
+      .autoProvidejQuery()
+    ;
+
+    module.exports = Encore.getWebpackConfig();
+    ```
+
+    Build the entrypoint before rendering stories:
+
+    ```bash
+    yarn encore dev
+    ```
+
+    Bundle configuration:
+
+    ```yaml
+    # config/packages/storybook/storybook.yaml
+    storybook:
+      asset_pipeline: auto
+      entrypoint: app
+    ```
+  </Tab>
+
+  <Tab title="AssetMapper">
+    Install AssetMapper if you have not already:
+
+    ```bash
+    composer require symfony/asset-mapper
+    ```
+
+    Make sure the `app` asset is registered in `importmap.php` and any CSS files are mapped as eager imports. The bundle reads the import map and eager entrypoint imports to build the assets response.
+
+    The Storybook framework's post-install cache pre-warm also runs `asset-map:compile` when AssetMapper is available, so the import map is generated before the first render.
+
+    Bundle configuration:
+
+    ```yaml
+    # config/packages/storybook/storybook.yaml
+    storybook:
+      asset_pipeline: auto
+      entrypoint: app
+    ```
+
+    Also add `config/packages/storybook/assets.yaml`:
+
+    ```yaml
+    framework:
+      asset_mapper:
+        paths:
+          assets/
+        importmap_path: '%kernel.project_dir%/importmap.php'
+    ```
+  </Tab>
+
+  <Tab title="No pipeline">
+    If your components do not require CSS or JavaScript, disable the pipeline:
+
+    ```yaml
+    # config/packages/storybook/storybook.yaml
+    storybook:
+      asset_pipeline: none
+    ```
+
+    The renderer will not inject any styles or scripts.
+  </Tab>
+</Tabs>
+
+## Verify the assets response
+
+To check which styles and scripts the bundle returned for a rendered component, inspect the `assets` field from `POST /_storybook/render/{id}`. It should contain the expected `styles`, `scripts`, and `importmap` for your entrypoint.
+
+If styles or Stimulus controllers are missing, confirm the entrypoint includes the CSS and Stimulus bootstrap, and that the rendered HTML contains `data-controller` attributes matching your `assets/controllers/` files.
