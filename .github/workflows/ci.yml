@@ -12,8 +12,24 @@ permissions:
 
 jobs:
   phpunit:
-    name: PHPUnit
+    name: PHPUnit (Symfony ${{ matrix.symfony }}, PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            symfony: '6.4'
+            expected_symfony: '6.4'
+            dependencies: lowest
+          - php: '8.3'
+            symfony: '7.4'
+            expected_symfony: '7.4'
+            dependencies: locked
+          - php: '8.4'
+            symfony: '8.x'
+            expected_symfony: '8.'
+            dependencies: latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -21,14 +37,34 @@ jobs:
 
       - uses: shivammathur/setup-php@9e72090525849c4e268e0af93c4932be26f1fa8e # 2.32.0
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
           tools: composer
 
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: |
+          if [ '${{ matrix.dependencies }}' = 'lowest' ]; then
+            composer update --prefer-lowest --prefer-stable --with-all-dependencies --prefer-dist --no-interaction --no-progress
+          elif [ '${{ matrix.dependencies }}' = 'latest' ]; then
+            composer update --with-all-dependencies --prefer-dist --no-interaction --no-progress
+          else
+            composer install --prefer-dist --no-interaction --no-progress
+          fi
+
+      - name: Verify Symfony version
+        env:
+          EXPECTED_SYMFONY: ${{ matrix.expected_symfony }}
+        run: |
+          composer show symfony/framework-bundle --format=json | php -r '
+            $package = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR);
+            $version = ltrim($package["versions"][0], "v");
+            if (!str_starts_with($version, getenv("EXPECTED_SYMFONY"))) {
+                fwrite(STDERR, "Expected Symfony ".getenv("EXPECTED_SYMFONY").", installed ".$version.PHP_EOL);
+                exit(1);
+            }
+          '
 
       - name: Run PHPUnit
         run: composer test
