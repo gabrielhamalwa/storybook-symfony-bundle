@@ -1,94 +1,79 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Storybook\SymfonyBundle\Tests\Asset;
-
-use PHPUnit\Framework\TestCase;
 use Pentatrion\ViteBundle\Service\EntrypointsLookup;
 use Pentatrion\ViteBundle\Service\EntrypointsLookupCollection;
 use Storybook\SymfonyBundle\Asset\PentatrionViteAssetPipeline;
+test('returns empty assets when no entrypoints file', function () {
+    $lookup = $this->createMock(EntrypointsLookup::class);
+    $lookup->method('hasFile')->willReturn(false);
 
-final class PentatrionViteAssetPipelineTest extends TestCase
-{
-    public function testReturnsEmptyAssetsWhenNoEntrypointsFile(): void
-    {
-        $lookup = $this->createMock(EntrypointsLookup::class);
-        $lookup->method('hasFile')->willReturn(false);
+    $collection = $this->createMock(EntrypointsLookupCollection::class);
+    $collection->method('getEntrypointsLookup')->willReturn($lookup);
 
-        $collection = $this->createMock(EntrypointsLookupCollection::class);
-        $collection->method('getEntrypointsLookup')->willReturn($lookup);
+    $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
 
-        $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
+    self::assertSame([
+        'pipeline' => 'pentatrion-vite',
+        'styles' => [],
+        'scripts' => [],
+        'importmap' => null,
+    ], $pipeline->getAssets());
+});
+test('returns normalized assets for entrypoint', function () {
+    $lookup = $this->createMock(EntrypointsLookup::class);
+    $lookup->method('hasFile')->willReturn(true);
+    $lookup->method('getBase')->willReturn('/build/');
+    $lookup->method('getCSSFiles')->with('app')->willReturn(['assets/app.css']);
+    $lookup->method('getJSFiles')->with('app')->willReturn(['assets/app.js']);
 
-        self::assertSame([
-            'pipeline' => 'pentatrion-vite',
-            'styles' => [],
-            'scripts' => [],
-            'importmap' => null,
-        ], $pipeline->getAssets());
-    }
+    $collection = $this->createMock(EntrypointsLookupCollection::class);
+    $collection->method('getEntrypointsLookup')->willReturn($lookup);
 
-    public function testReturnsNormalizedAssetsForEntrypoint(): void
-    {
-        $lookup = $this->createMock(EntrypointsLookup::class);
-        $lookup->method('hasFile')->willReturn(true);
-        $lookup->method('getBase')->willReturn('/build/');
-        $lookup->method('getCSSFiles')->with('app')->willReturn(['assets/app.css']);
-        $lookup->method('getJSFiles')->with('app')->willReturn(['assets/app.js']);
+    $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
 
-        $collection = $this->createMock(EntrypointsLookupCollection::class);
-        $collection->method('getEntrypointsLookup')->willReturn($lookup);
+    self::assertSame([
+        'pipeline' => 'pentatrion-vite',
+        'styles' => [['url' => '/build/assets/app.css']],
+        'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
+        'importmap' => null,
+    ], $pipeline->getAssets());
+});
+test('uses configured entrypoint', function () {
+    $lookup = $this->createMock(EntrypointsLookup::class);
+    $lookup->method('hasFile')->willReturn(true);
+    $lookup->method('getBase')->willReturn('/build/');
+    $lookup->method('getCSSFiles')->with('storybook')->willReturn([]);
+    $lookup->method('getJSFiles')->with('storybook')->willReturn(['assets/storybook.js']);
 
-        $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
+    $collection = $this->createMock(EntrypointsLookupCollection::class);
+    $collection->method('getEntrypointsLookup')->willReturn($lookup);
 
-        self::assertSame([
-            'pipeline' => 'pentatrion-vite',
-            'styles' => [['url' => '/build/assets/app.css']],
-            'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
-            'importmap' => null,
-        ], $pipeline->getAssets());
-    }
+    $pipeline = new PentatrionViteAssetPipeline($collection, 'storybook');
 
-    public function testUsesConfiguredEntrypoint(): void
-    {
-        $lookup = $this->createMock(EntrypointsLookup::class);
-        $lookup->method('hasFile')->willReturn(true);
-        $lookup->method('getBase')->willReturn('/build/');
-        $lookup->method('getCSSFiles')->with('storybook')->willReturn([]);
-        $lookup->method('getJSFiles')->with('storybook')->willReturn(['assets/storybook.js']);
+    self::assertSame([
+        'pipeline' => 'pentatrion-vite',
+        'styles' => [],
+        'scripts' => [['url' => '/build/assets/storybook.js', 'type' => 'module']],
+        'importmap' => null,
+    ], $pipeline->getAssets());
+});
+test('does not duplicate base already included by vite plugin', function () {
+    $lookup = $this->createMock(EntrypointsLookup::class);
+    $lookup->method('hasFile')->willReturn(true);
+    $lookup->method('getBase')->willReturn('/build/');
+    $lookup->method('getCSSFiles')->with('app')->willReturn(['/build/assets/app.css']);
+    $lookup->method('getJSFiles')->with('app')->willReturn(['/build/assets/app.js']);
 
-        $collection = $this->createMock(EntrypointsLookupCollection::class);
-        $collection->method('getEntrypointsLookup')->willReturn($lookup);
+    $collection = $this->createMock(EntrypointsLookupCollection::class);
+    $collection->method('getEntrypointsLookup')->willReturn($lookup);
 
-        $pipeline = new PentatrionViteAssetPipeline($collection, 'storybook');
+    $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
 
-        self::assertSame([
-            'pipeline' => 'pentatrion-vite',
-            'styles' => [],
-            'scripts' => [['url' => '/build/assets/storybook.js', 'type' => 'module']],
-            'importmap' => null,
-        ], $pipeline->getAssets());
-    }
-
-    public function testDoesNotDuplicateBaseAlreadyIncludedByVitePlugin(): void
-    {
-        $lookup = $this->createMock(EntrypointsLookup::class);
-        $lookup->method('hasFile')->willReturn(true);
-        $lookup->method('getBase')->willReturn('/build/');
-        $lookup->method('getCSSFiles')->with('app')->willReturn(['/build/assets/app.css']);
-        $lookup->method('getJSFiles')->with('app')->willReturn(['/build/assets/app.js']);
-
-        $collection = $this->createMock(EntrypointsLookupCollection::class);
-        $collection->method('getEntrypointsLookup')->willReturn($lookup);
-
-        $pipeline = new PentatrionViteAssetPipeline($collection, 'app');
-
-        self::assertSame([
-            'pipeline' => 'pentatrion-vite',
-            'styles' => [['url' => '/build/assets/app.css']],
-            'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
-            'importmap' => null,
-        ], $pipeline->getAssets());
-    }
-}
+    self::assertSame([
+        'pipeline' => 'pentatrion-vite',
+        'styles' => [['url' => '/build/assets/app.css']],
+        'scripts' => [['url' => '/build/assets/app.js', 'type' => 'module']],
+        'importmap' => null,
+    ], $pipeline->getAssets());
+});
