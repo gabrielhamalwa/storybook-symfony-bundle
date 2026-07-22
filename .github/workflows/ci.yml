@@ -184,7 +184,7 @@ jobs:
           key: ${{ steps.composer-cache-restore.outputs.cache-primary-key }}
 
       - name: Run Pest with coverage
-        run: vendor/bin/pest --coverage --coverage-clover coverage.xml
+        run: vendor/bin/pest --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
