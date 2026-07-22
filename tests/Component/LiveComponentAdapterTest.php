@@ -9,7 +9,9 @@ use Storybook\SymfonyBundle\Component\LiveComponentAdapter;
 use Storybook\SymfonyBundle\Dto\RenderRequest;
 use Storybook\SymfonyBundle\Tests\Fixtures\Twig\Components\LiveCounter;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
-use Symfony\UX\TwigComponent\ComponentRendererInterface;
+use Twig\Environment;
+use Twig\Loader\ArrayLoader;
+use Twig\TwigFunction;
 
 final class LiveComponentAdapterTest extends TestCase
 {
@@ -19,7 +21,7 @@ final class LiveComponentAdapterTest extends TestCase
             $this->markTestSkipped('Symfony UX Live Component is installed.');
         }
 
-        $adapter = new LiveComponentAdapter($this->createMock(ComponentRendererInterface::class));
+        $adapter = new LiveComponentAdapter($this->createMock(Environment::class));
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Symfony UX Live Component is not installed.');
@@ -36,13 +38,7 @@ final class LiveComponentAdapterTest extends TestCase
             $this->markTestSkipped('Symfony UX Live Component is not installed.');
         }
 
-        $renderer = $this->createMock(ComponentRendererInterface::class);
-        $renderer
-            ->method('createAndRender')
-            ->with('LiveCounter', ['count' => 5])
-            ->willReturn('<div>Live counter</div>');
-
-        $adapter = new LiveComponentAdapter($renderer);
+        $adapter = new LiveComponentAdapter($this->createTwigEnvironment());
         $html = $adapter->render(new RenderRequest(
             id: 'live-counter--default',
             componentId: 'LiveCounter',
@@ -58,7 +54,7 @@ final class LiveComponentAdapterTest extends TestCase
             $this->markTestSkipped('Symfony UX Live Component is not installed.');
         }
 
-        $adapter = new LiveComponentAdapter($this->createMock(ComponentRendererInterface::class));
+        $adapter = new LiveComponentAdapter($this->createMock(Environment::class));
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Missing component ID for live component adapter.');
@@ -79,13 +75,7 @@ final class LiveComponentAdapterTest extends TestCase
         self::assertCount(1, $attributes);
         self::assertSame('LiveCounter', $attributes[0]->newInstance()->serviceConfig()['key']);
 
-        $renderer = $this->createMock(ComponentRendererInterface::class);
-        $renderer
-            ->method('createAndRender')
-            ->with('LiveCounter', ['count' => 5])
-            ->willReturn('<div>Live counter</div>');
-
-        $adapter = new LiveComponentAdapter($renderer);
+        $adapter = new LiveComponentAdapter($this->createTwigEnvironment());
         $html = $adapter->render(new RenderRequest(
             id: 'live-counter--default',
             componentId: 'LiveCounter',
@@ -93,5 +83,22 @@ final class LiveComponentAdapterTest extends TestCase
         ));
 
         self::assertSame('<div>Live counter</div>', $html);
+    }
+
+    private function createTwigEnvironment(): Environment
+    {
+        $twig = new Environment(new ArrayLoader());
+        $twig->addFunction(new TwigFunction(
+            'component',
+            static function (string $componentId, array $args): string {
+                self::assertSame('LiveCounter', $componentId);
+                self::assertSame(['count' => 5], $args);
+
+                return '<div>Live counter</div>';
+            },
+            ['is_safe' => ['html']]
+        ));
+
+        return $twig;
     }
 }
