@@ -1,0 +1,260 @@
+---
+title: "Installation"
+description: "Install the Storybook Symfony Bundle and the Storybook framework in your Symfony project, then render your first component story."
+icon: "download"
+---
+
+# Installation
+
+This guide walks you through installing the Symfony bundle, configuring the `storybook` environment, and rendering a Twig component story in Storybook.
+
+## Before you start
+
+Make sure you have:
+
+- PHP 8.2 or higher installed and on your `PATH` (`php -v`).
+- Composer installed (`composer --version`).
+- A Symfony project with Twig 3.8 or higher and Symfony UX TwigComponent 2.0 or 3.0.
+- Node.js and npm, yarn, or pnpm for the Storybook framework.
+
+<Note>
+Optional but commonly used: `symfony/ux-live-component` for live component stories, and `pentatrion/vite-bundle`, `symfony/webpack-encore-bundle`, or `symfony/asset-mapper` for asset pipelines.
+</Note>
+
+<Steps>
+  <Step title="Install the bundle">
+    Run Composer from your Symfony project root:
+
+    ```bash
+    composer require --dev storybook/symfony-bundle
+    ```
+
+    If Symfony Flex is enabled, the bundle is registered automatically. Otherwise, add it to `config/bundles.php`:
+
+    ```php
+    return [
+        // ...
+        Storybook\SymfonyBundle\StorybookBundle::class => ['storybook' => true],
+    ];
+    ```
+
+    Verify the installation:
+
+    ```bash
+    composer show storybook/symfony-bundle
+    ```
+  </Step>
+
+  <Step title="Install the Storybook framework">
+    In your project root, install `@storybook/symfony-vite` and Storybook:
+
+    <CodeGroup>
+      ```bash yarn
+      yarn add -D @storybook/symfony-vite storybook
+      ```
+
+      ```bash npm
+      npm install -D @storybook/symfony-vite storybook
+      ```
+
+      ```bash pnpm
+      pnpm add -D @storybook/symfony-vite storybook
+      ```
+    </CodeGroup>
+
+    <Note>
+    If `@storybook/symfony-vite` is not yet on the public registry, install it from the local Storybook monorepo with a path dependency instead.
+    </Note>
+  </Step>
+
+  <Step title="Add the bundle routes">
+    Create `config/routes/storybook.yaml` and register the bundle's controller routes:
+
+    ```yaml
+    # config/routes/storybook.yaml
+    storybook:
+      resource: Storybook\SymfonyBundle\Controller\StorybookController
+      type: attribute
+    ```
+
+    These routes are only loaded in the `storybook` environment.
+  </Step>
+
+  <Step title="Configure the storybook environment">
+    Keep the `storybook` environment minimal so the container compiles quickly. Create the files you need from the list below.
+
+    `config/packages/storybook/framework.yaml`:
+
+    ```yaml
+    framework:
+      router:
+        utf8: true
+        strict_requirements: ~
+      test: false
+      session:
+        enabled: false
+    ```
+
+    `config/packages/storybook/twig.yaml`:
+
+    ```yaml
+    twig:
+      default_path: '%kernel.project_dir%/templates'
+    ```
+
+    `config/packages/storybook/twig_component.yaml`:
+
+    ```yaml
+    twig_component:
+      anonymous_template_directory: 'components/'
+      defaults:
+        App\Twig\Components\: 'components/'
+    ```
+
+    `config/packages/storybook/stimulus.yaml`:
+
+    ```yaml
+    stimulus:
+      controllers_path: '%kernel.project_dir%/assets/controllers'
+      controller_jsons_path: '%kernel.project_dir%/assets/controllers.json'
+    ```
+
+    If you use AssetMapper, also create `config/packages/storybook/assets.yaml`:
+
+    ```yaml
+    framework:
+      asset_mapper:
+        paths:
+          assets/
+        importmap_path: '%kernel.project_dir%/importmap.php'
+    ```
+
+    Verify the routes are registered:
+
+    ```bash
+    php bin/console debug:router --env=storybook
+    ```
+
+    You should see `/_storybook/health`, `/_storybook/render/{id}`, `/_storybook/index`, and `/_storybook/source/{id}`.
+  </Step>
+
+  <Step title="Create a component and a story">
+    Create the Twig component class:
+
+    ```php
+    // src/Twig/Components/Button.php
+    <?php
+
+    namespace App\Twig\Components;
+
+    use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
+
+    #[AsTwigComponent('Button')]
+    final class Button
+    {
+        public string $label = 'Button';
+        public string $variant = 'primary';
+    }
+    ```
+
+    Create its template:
+
+    ```twig
+    {# templates/components/Button.html.twig #}
+    <button class="btn btn-{{ variant }}">{{ label }}</button>
+    ```
+
+    Configure Storybook:
+
+    ```ts
+    // .storybook/main.ts
+    import type { StorybookConfig } from '@storybook/symfony-vite';
+
+    const config: StorybookConfig = {
+      stories: ['../stories/**/*.stories.ts'],
+      addons: ['@storybook/addon-essentials'],
+      framework: {
+        name: '@storybook/symfony-vite',
+        options: {
+          symfony: {
+            server: 'php',
+          },
+        },
+      },
+    };
+
+    export default config;
+    ```
+
+    Create the story file:
+
+    ```ts
+    // stories/Button.stories.ts
+    import type { Meta, StoryObj } from '@storybook/symfony-vite';
+
+    type ButtonArgs = {
+      label: string;
+      variant?: 'primary' | 'secondary';
+    };
+
+    const meta = {
+      title: 'Components/Button',
+      component: 'Button',
+    } satisfies Meta<ButtonArgs>;
+
+    export default meta;
+
+    type Story = StoryObj<ButtonArgs>;
+
+    export const Primary: Story = {
+      args: {
+        label: 'Primary Button',
+        variant: 'primary',
+      },
+    };
+
+    export const Secondary: Story = {
+      args: {
+        label: 'Secondary Button',
+        variant: 'secondary',
+      },
+    };
+    ```
+  </Step>
+
+  <Step title="Start Storybook">
+    Run Storybook from your project root:
+
+    <CodeGroup>
+      ```bash yarn
+      yarn storybook
+      ```
+
+      ```bash npm
+      npx storybook
+      ```
+
+      ```bash pnpm
+      pnpm storybook
+      ```
+    </CodeGroup>
+
+    The framework starts the PHP server, warms the Symfony cache, and opens Storybook in your browser. Confirm the backend is reachable:
+
+    ```bash
+    curl http://127.0.0.1:<port>/_storybook/health
+    ```
+
+    Replace `<port>` with the port Storybook printed in the terminal. You should see:
+
+    ```json
+    { "status": "ok" }
+    ```
+  </Step>
+</Steps>
+
+## Next steps
+
+- Learn how to configure the Storybook framework and choose a server backend: [Storybook framework](/getting-started/framework).
+- Learn how the bundle extracts assets for your chosen pipeline: [Asset pipelines](/usage/asset-pipelines).
+- If something goes wrong, see [Troubleshooting](/development/troubleshooting).
