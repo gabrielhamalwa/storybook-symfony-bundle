@@ -1,0 +1,76 @@
+---
+title: "Configuration"
+description: "Configure the Storybook Symfony Bundle under the storybook key in your Symfony project."
+icon: "settings"
+---
+
+# Configuration
+
+The bundle is configured under the `storybook` key in `config/packages/storybook/storybook.yaml`:
+
+```yaml
+storybook:
+  asset_pipeline: auto
+  entrypoint: app
+  cors_allowed_origins: []
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `asset_pipeline` | `auto`, `pentatrion_vite`, `encore`, `asset_mapper`, `none` | `auto` | Asset pipeline to use for extracting styles and scripts. |
+| `entrypoint` | `string` | `app` | Entrypoint name used to look up the component's assets. |
+| `cors_allowed_origins` | `string[]` | `[]` | Origins allowed to call an explicitly configured browser-reachable backend. Standard static builds do not need CORS. |
+
+The Node framework owns the Symfony environment, project directory, public directory, server process, and port. Configure those values in `framework.options.symfony` in `.storybook/main.ts`.
+
+## Asset pipeline auto-detection
+
+When `asset_pipeline` is `auto`, the bundle detects the installed pipeline by checking for known Symfony services in this order:
+
+1. Pentatrion Vite (`Pentatrion\ViteBundle\Service\EntrypointsLookupCollection`)
+2. Webpack Encore (`webpack_encore.entrypoint_lookup_collection`)
+3. AssetMapper (`asset_mapper.importmap.generator`)
+4. None (`NullAssetPipeline`)
+
+## Disabling the pipeline
+
+If your components do not require CSS or JavaScript, set `asset_pipeline: none`:
+
+```yaml
+storybook:
+  asset_pipeline: none
+```
+
+## Environment-specific settings
+
+<Tip>
+Because the bundle is only enabled in the `storybook` environment, you can keep all Storybook-specific configuration under `config/packages/storybook/` without affecting `dev`, `test`, or `prod`.
+</Tip>
+
+## Existing browser-reachable backends
+
+Development uses a same-origin Vite proxy and standard static builds run Symfony in the browser, so
+neither mode requires CORS. If a custom integration deliberately calls a separately deployed Symfony
+backend from the browser, allow only the Storybook origin:
+
+```yaml
+storybook:
+  cors_allowed_origins:
+    - 'https://storybook.example.com'
+```
+
+### CORS listener
+
+`CorsListener` adds the configured CORS headers to every `/_storybook` response when a request includes an `Origin` header that matches `cors_allowed_origins`. Use `'*'` to allow any origin, but prefer explicit origins for production backends.
+
+The listener sets:
+
+- `Access-Control-Allow-Origin` — the matched origin, or `*` when configured.
+- `Access-Control-Allow-Methods` — `GET, POST, OPTIONS`.
+- `Access-Control-Allow-Headers` — `Content-Type`.
+
+`OPTIONS` requests are answered with HTTP `204`. Standard Storybook usage through the Vite proxy does not trigger this path because the proxy forwards same-origin requests without CORS preflight.
+
+<Warning>
+The render endpoint can invoke project templates, Twig components, and configured controller fragments. Protect any browser-reachable backend with the same authentication and network controls as the Storybook site. This mode is not a self-contained static build.
+</Warning>
