@@ -5,7 +5,7 @@
          colors="true">
     <testsuites>
         <testsuite name="Storybook Symfony Bundle Test Suite">
-            <directory>tests</directory>
+            <directory suffix="Test.php">tests</directory>
         </testsuite>
     </testsuites>
 </phpunit>
