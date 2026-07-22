@@ -11,6 +11,53 @@ permissions:
   contents: read
 
 jobs:
+  static-analysis:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@9e72090525849c5e82e596468b86eb55e9cc5401 # 2.32.0
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+
+      - name: Remove Composer GitHub OAuth token
+        run: composer config --global --unset github-oauth.github.com || true
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Restore Composer cache
+        id: composer-cache-restore
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php8.2-static-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php8.2-static-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Save Composer cache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ steps.composer-cache-restore.outputs.cache-primary-key }}
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress
+
   pest:
     name: Pest (Symfony ${{ matrix.symfony }}, PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
@@ -94,3 +141,54 @@ jobs:
 
       - name: Run Pest
         run: composer test
+
+  coverage:
+    name: Coverage (PHP 8.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@9e72090525849c5e82e596468b86eb55e9cc5401 # 2.32.0
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: pcov
+
+      - name: Remove Composer GitHub OAuth token
+        run: composer config --global --unset github-oauth.github.com || true
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Restore Composer cache
+        id: composer-cache-restore
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php8.3-locked-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php8.3-locked-
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Save Composer cache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ steps.composer-cache-restore.outputs.cache-primary-key }}
+
+      - name: Run Pest with coverage
+        run: vendor/bin/pest --coverage --coverage-clover coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
